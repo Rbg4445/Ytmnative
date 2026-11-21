@@ -4,7 +4,7 @@
   <br/>
 
   <p>
-    <a href="https://github.com/Rbg4445/Youtube-music-native/releases/latest">
+    <a href="https://github.com/Rbg4445/Ytmnative/releases/latest">
       <img src="https://img.shields.io/badge/İndir-YTM--Native--Setup--1.0.0.exe-FF0033?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Setup İndir" />
     </a>
     <img src="https://img.shields.io/badge/Sürüm-v1.0.0-111116?style=for-the-badge&logo=github" alt="v1.0.0" />
@@ -54,7 +54,7 @@
 
 ## 📥 Kurulum
 
-1. **[Releases](https://github.com/Rbg4445/Youtube-music-native/releases/latest)** sayfasından **`YTM-Native-Setup-1.0.0.exe`** dosyasını indirin.
+1. **[Releases](https://github.com/Rbg4445/Ytmnative/releases/latest)** sayfasından **`YTM-Native-Setup-1.0.0.exe`** dosyasını indirin.
 2. Kurulum sihirbazını çalıştırın (yönetici izni gerektirmez, `%LOCALAPPDATA%\YTM Native` klasörüne kurulur).
 3. Yeni bir sürüm yayınlandığında uygulama her açılışta 5 saniye içinde kontrol eder ve kendini otomatik günceller.
 

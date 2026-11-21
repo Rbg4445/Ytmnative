@@ -2,7 +2,7 @@
 #define MyAppName "YTM Native"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Rbg4445"
-#define MyAppURL "https://github.com/Rbg4445/Youtube-music-native"
+#define MyAppURL "https://github.com/Rbg4445/Ytmnative"
 #define MyAppExeName "ytm-native.exe"
 
 [Setup]

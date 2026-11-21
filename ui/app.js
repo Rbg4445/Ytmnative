@@ -1,5 +1,5 @@
 const invoke = window.__TAURI__.core.invoke;
-const DEFAULT_UPDATE_REPO = "Rbg4445/Youtube-music-native";
+const DEFAULT_UPDATE_REPO = "Rbg4445/Ytmnative";
 
 const MOODS = [
   ["Enerjik", "enerjik müzik mix"],

@@ -10,7 +10,7 @@ pub const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Default GitHub repo ("owner/repo") for VDS-free updates via GitHub Releases.
 /// Can be overridden in the UI (saved in library.json).
-pub const DEFAULT_GITHUB_REPO: &str = "Rbg4445/Youtube-music-native";
+pub const DEFAULT_GITHUB_REPO: &str = "Rbg4445/Ytmnative";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateInfo {
