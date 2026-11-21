@@ -1,6 +1,6 @@
 ; YTM Native — Windows Kurulum Sihirbazı (Inno Setup 6)
 #define MyAppName "YTM Native"
-#define MyAppVersion "2.0.0"
+#define MyAppVersion "3.0.0"
 #define MyAppPublisher "Rbg4445"
 #define MyAppURL "https://github.com/Rbg4445/Ytmnative"
 #define MyAppExeName "ytm-native.exe"
@@ -26,12 +26,12 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 ; Standard ZIP compression avoids LZMA high-entropy heuristic false positives on VirusTotal
 Compression=zip
 SolidCompression=no
-VersionInfoVersion=2.0.0.0
+VersionInfoVersion=3.0.0.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=YTM Native — Pure-Rust Desktop Client Installer
 VersionInfoCopyright=Copyright (c) 2026 {#MyAppPublisher} (MIT License)
 VersionInfoProductName={#MyAppName}
-VersionInfoProductVersion=2.0.0.0
+VersionInfoProductVersion=3.0.0.0
 VersionInfoProductTextVersion={#MyAppVersion}
 WizardStyle=modern
 CloseApplications=force

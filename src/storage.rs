@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::model::{Playlist, Track};
+use crate::model::{ArtistSummary, Playlist, Track};
 
 const MAX_RECENTLY_PLAYED: usize = 40;
 
@@ -17,6 +17,10 @@ pub struct LibraryData {
     pub liked_tracks: Vec<Track>,
     #[serde(default)]
     pub playlists: Vec<Playlist>,
+    #[serde(default)]
+    pub followed_artists: Vec<ArtistSummary>,
+    #[serde(default)]
+    pub auth_cookie: Option<String>,
     #[serde(default = "default_volume")]
     pub volume: f32,
     /// Optional GitHub repository ("owner/repo") used for VDS-free updates via GitHub Releases.
@@ -72,6 +76,8 @@ impl Default for LibraryData {
             recently_played: Vec::new(),
             liked_tracks: Vec::new(),
             playlists: Vec::new(),
+            followed_artists: Vec::new(),
+            auth_cookie: None,
             volume: default_volume(),
             update_repo: None,
             last_track: None,
@@ -195,6 +201,18 @@ impl LibraryData {
         if let Some(pl) = self.playlists.iter_mut().find(|p| p.id == playlist_id) {
             pl.tracks.retain(|t| t.id != track_id);
             self.save();
+        }
+    }
+
+    pub fn toggle_follow_artist(&mut self, artist: &ArtistSummary) -> bool {
+        if let Some(pos) = self.followed_artists.iter().position(|a| a.id == artist.id) {
+            self.followed_artists.remove(pos);
+            self.save();
+            false
+        } else {
+            self.followed_artists.insert(0, artist.clone());
+            self.save();
+            true
         }
     }
 }

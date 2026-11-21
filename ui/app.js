@@ -41,9 +41,19 @@ const MOODS = [
 let state = {
   page: "home",
   playlistId: null,
+  artistId: null,
+  artistNameHint: null,
+  artistDetail: null,
+  loadingArtist: false,
+  nowPlayingArtist: null,
+  nowPlayingArtistKey: null,
+  navHistory: [{ page: "home", id: null, extra: null }],
+  navIdx: 0,
+  libFilter: "all",
+  libSearch: "",
   sidebarExpanded: true,
-  queueOpen: false,
-  drawerTab: "queue",
+  queueOpen: true,
+  drawerTab: "now",
   lyricsTrackId: null,
   lyricsData: null,
   loadingLyrics: false,
@@ -56,6 +66,7 @@ let state = {
   moodTracks: [],
   loadingMood: false,
   searchQuery: "",
+  searchArtists: [],
   searchResults: [],
   searching: false,
   ytConnected: false,
@@ -67,6 +78,7 @@ let state = {
     recently_played: [],
     liked_tracks: [],
     playlists: [],
+    followed_artists: [],
     volume: 0.85,
     update_repo: "",
     custom_css: "",
@@ -88,7 +100,7 @@ let state = {
     stream_meta: null,
     last_error: null,
   },
-  updateStatus: { kind: "idle", version: "2.0.0", info: null, message: "" },
+  updateStatus: { kind: "idle", version: "3.0.0", info: null, message: "" },
   authMsg: "",
   authErr: "",
   authBusy: false,
@@ -136,6 +148,22 @@ function isLiked(trackId) {
   return state.library.liked_tracks.some((t) => t.id === trackId);
 }
 
+function isArtistFollowed(artistId, artistName) {
+  const list = state.library.followed_artists || [];
+  return list.some(
+    (a) =>
+      (artistId && a.id === artistId) ||
+      (artistName && a.name.toLowerCase() === artistName.toLowerCase())
+  );
+}
+
+function fmtCount(n) {
+  if (!n) return "";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".0", "")}M abone`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(".0", "")}B abone`;
+  return `${n} abone`;
+}
+
 function showBanner(msg, isError = false) {
   const el = document.getElementById("status-banner");
   if (!msg) {
@@ -144,16 +172,120 @@ function showBanner(msg, isError = false) {
   }
   el.textContent = msg;
   el.className = isError
-    ? "mx-8 mb-2 px-3.5 py-2 rounded-lg text-xs bg-[#3a0d16] text-red-200 border border-[#FF0033]/40"
-    : "mx-8 mb-2 px-3.5 py-2 rounded-lg text-xs bg-white/10 text-neutral-200";
+    ? "mx-6 mt-3 px-3.5 py-2 rounded-lg text-xs bg-[#3a0d16] text-red-200 border border-[#FF0033]/40"
+    : "mx-6 mt-3 px-3.5 py-2 rounded-lg text-xs bg-white/10 text-neutral-200";
   el.classList.remove("hidden");
 }
 
-function navigate(page, playlistId = null) {
+function navigate(page, id = null, extra = null, fromHistory = false) {
   state.page = page;
-  state.playlistId = playlistId;
+  if (page === "playlist") {
+    state.playlistId = id;
+  } else if (page === "artist") {
+    state.artistId = id;
+    state.artistNameHint = extra;
+  }
+  if (!fromHistory) {
+    state.navHistory = state.navHistory.slice(0, state.navIdx + 1);
+    state.navHistory.push({ page, id, extra });
+    state.navIdx = state.navHistory.length - 1;
+  }
   renderNav();
   renderMain();
+}
+
+function navBack() {
+  if (state.navIdx > 0) {
+    state.navIdx -= 1;
+    const entry = state.navHistory[state.navIdx];
+    if (entry.page === "artist") {
+      openArtist(entry.id, entry.extra, true);
+    } else {
+      navigate(entry.page, entry.id, entry.extra, true);
+    }
+  }
+}
+
+function navForward() {
+  if (state.navIdx + 1 < state.navHistory.length) {
+    state.navIdx += 1;
+    const entry = state.navHistory[state.navIdx];
+    if (entry.page === "artist") {
+      openArtist(entry.id, entry.extra, true);
+    } else {
+      navigate(entry.page, entry.id, entry.extra, true);
+    }
+  }
+}
+
+async function openArtist(artistId, artistName = null, fromHistory = false) {
+  const cleanId = (artistId || "").trim();
+  const cleanName = (artistName || "").split(",")[0].trim();
+  if (!cleanId && !cleanName) return;
+
+  state.loadingArtist = true;
+  state.artistDetail = {
+    id: cleanId || cleanName,
+    name: cleanName || cleanId,
+    avatar_url: null,
+    description: null,
+    subscriber_count: null,
+    tracks: [],
+    similar_artists: [],
+  };
+  navigate("artist", cleanId, cleanName, fromHistory);
+
+  try {
+    const detail = await invoke("get_artist", {
+      artistId: cleanId,
+      artistName: cleanName || null,
+    });
+    state.artistDetail = detail;
+  } catch (e) {
+    showBanner(`⚠ Sanatçı yüklenemedi: ${e}`, true);
+  }
+  state.loadingArtist = false;
+  if (state.page === "artist") {
+    renderMain();
+  }
+}
+
+function openCurrentTrackArtist() {
+  const cur = state.playback.current;
+  if (!cur) return;
+  openArtist(cur.artist_id || "", cur.artist);
+}
+
+async function toggleFollowArtistObj(artist) {
+  const followed = await invoke("toggle_follow_artist", { artist });
+  await refreshLibrary();
+  renderMain();
+  renderNowPlayingPanel();
+  showBanner(
+    followed
+      ? `✓ ${artist.name} kitaplığına eklendi.`
+      : `${artist.name} takipten çıkarıldı.`
+  );
+  setTimeout(() => showBanner(""), 2000);
+}
+
+function setLibFilter(filter) {
+  state.libFilter = filter;
+  ["all", "playlists", "artists"].forEach((k) => {
+    const btn = document.getElementById(`lib-chip-${k}`);
+    if (btn) {
+      btn.className =
+        filter === k
+          ? "px-3 py-1 rounded-full text-xs font-medium bg-white text-black transition cursor-pointer shrink-0"
+          : "px-3 py-1 rounded-full text-xs font-medium bg-white/[0.08] hover:bg-white/[0.15] text-white transition cursor-pointer shrink-0";
+    }
+  });
+  renderNav();
+}
+
+function setLibSearch(val) {
+  state.libSearch = (val || "").trim().toLowerCase();
+  renderNav();
 }
 
 function toggleQueue() {
@@ -164,12 +296,20 @@ function toggleQueue() {
     drawer.classList.remove("hidden");
     drawer.classList.add("flex");
     btn.classList.add("text-[#FF0033]");
+    renderNowPlayingPanel();
     renderQueue();
   } else {
     drawer.classList.add("hidden");
     drawer.classList.remove("flex");
     btn.classList.remove("text-[#FF0033]");
   }
+}
+
+function openDrawerTab(tab) {
+  if (!state.queueOpen) {
+    toggleQueue();
+  }
+  switchDrawerTab(tab);
 }
 
 function toggleNewPlaylistBox() {
@@ -190,12 +330,39 @@ async function createPlaylist() {
   navigate("playlist", id);
 }
 
+function getSidebarArtists() {
+  const map = new Map();
+  for (const a of state.library.followed_artists || []) {
+    if (a.name) map.set(a.name.toLowerCase(), a);
+  }
+  const recentSource = [
+    ...(state.library.recently_played || []),
+    ...(state.library.liked_tracks || []),
+    ...(state.ytHistory || []),
+  ];
+  for (const t of recentSource) {
+    const primaryName = (t.artist || "").split(",")[0].trim();
+    if (!primaryName || primaryName === "Bilinmeyen Sanatçı") continue;
+    const key = primaryName.toLowerCase();
+    if (!map.has(key)) {
+      map.set(key, {
+        id: t.artist_id || "",
+        name: primaryName,
+        avatar_url: t.thumbnail_url || null,
+        subscriber_count: null,
+      });
+    }
+    if (map.size >= 14) break;
+  }
+  return Array.from(map.values());
+}
+
 function renderNav() {
-  document.querySelectorAll(".nav-item").forEach((btn) => {
+  document.querySelectorAll(".nav-top-pill").forEach((btn) => {
     const active = btn.dataset.nav === state.page;
     btn.className = active
-      ? "nav-item w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-[14.5px] font-medium bg-[#212121] text-white transition cursor-pointer"
-      : "nav-item w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-[14.5px] font-medium text-neutral-300 hover:bg-white/[0.08] hover:text-white transition cursor-pointer";
+      ? "nav-top-pill w-10 h-10 rounded-full bg-white text-black flex items-center justify-center transition cursor-pointer shrink-0 shadow"
+      : "nav-top-pill w-10 h-10 rounded-full bg-[#1f1f24] hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition cursor-pointer shrink-0";
   });
 
   // Account avatar state
@@ -207,8 +374,8 @@ function renderNav() {
     av.title = "YouTube Hesabı Bağlı";
   } else {
     av.className =
-      "w-8 h-8 rounded-full bg-neutral-500 hover:ring-2 hover:ring-white/40 flex items-center justify-center text-xs font-bold text-white transition cursor-pointer";
-    av.textContent = "";
+      "w-8 h-8 rounded-full bg-neutral-700 hover:ring-2 hover:ring-white/40 flex items-center justify-center text-xs font-bold text-white transition cursor-pointer";
+    av.textContent = "👤";
     av.title = "YouTube Hesabı Bağla (Geçmiş & Öneriler)";
   }
 
@@ -217,70 +384,246 @@ function renderNav() {
   if (state.updateStatus.kind === "available") {
     upd.textContent = `⬆ ${state.updateStatus.info.version} ${t("updateReady")}`;
     upd.className =
-      "mt-2 pt-2 border-t border-white/10 text-left px-2 py-1 text-[11.5px] font-medium text-[#FF0033] hover:text-white transition cursor-pointer truncate";
+      "sidebar-label mt-2 pt-2 border-t border-white/10 text-left px-2 py-1 text-[11.5px] font-medium text-[#FF0033] hover:text-white transition cursor-pointer truncate";
   } else {
     upd.textContent = `v${state.updateStatus.version} • ${t("updates")}`;
     upd.className =
-      "mt-2 pt-2 border-t border-white/10 text-left px-2 py-1 text-[11.5px] text-neutral-400 hover:text-white transition cursor-pointer truncate";
+      "sidebar-label mt-2 pt-2 border-t border-white/10 text-left px-2 py-1 text-[11.5px] text-neutral-400 hover:text-white transition cursor-pointer truncate";
   }
 
-  // Sidebar playlists
+  // Left Bento Card: Rich Library Items (Liked Songs + Playlists + Artists)
   const listEl = document.getElementById("sidebar-playlists");
-  const likedActive = state.page === "liked";
-  let html = `
-    <button onclick="navigate('liked')" class="w-full text-left px-2.5 py-2 rounded-lg transition cursor-pointer ${
-      likedActive ? "bg-[#212121]" : "hover:bg-white/[0.08]"
-    }">
-      <div class="text-[13.5px] font-medium text-white truncate">${esc(t("likedMusic"))}</div>
-      <div class="text-[11.5px] text-neutral-400 truncate mt-0.5">📌 ${esc(t("autoPlaylist"))} • ${
-        state.library.liked_tracks.length
-      }</div>
-    </button>
-  `;
-  for (const pl of state.library.playlists) {
-    const active = state.page === "playlist" && state.playlistId === pl.id;
-    html += `
-      <button onclick="navigate('playlist', '${esc(pl.id)}')" class="w-full text-left px-2.5 py-2 rounded-lg transition cursor-pointer ${
-        active ? "bg-[#212121]" : "hover:bg-white/[0.08]"
-      }">
-        <div class="text-[13.5px] font-medium text-white truncate">${esc(pl.name)}</div>
-        <div class="text-[11.5px] text-neutral-400 truncate mt-0.5">${esc(t("playlist"))} • ${pl.tracks.length}</div>
-      </button>
-    `;
+  const q = state.libSearch || "";
+  const filter = state.libFilter || "all";
+  let html = "";
+
+  if (filter === "all" || filter === "playlists") {
+    const likedTitle = t("likedMusic");
+    if (!q || likedTitle.toLowerCase().includes(q)) {
+      const likedActive = state.page === "liked";
+      html += `
+        <button onclick="navigate('liked')" class="w-full flex items-center gap-3 p-2 rounded-lg transition cursor-pointer ${
+          likedActive ? "bg-white/[0.14]" : "hover:bg-white/[0.07]"
+        }">
+          <div class="w-11 h-11 rounded-md bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#FF0033] flex items-center justify-center text-lg text-white shrink-0 shadow">♥</div>
+          <div class="sidebar-label min-w-0 text-left flex-1">
+            <div class="text-[13.5px] font-semibold truncate ${likedActive ? "text-[#FF0033]" : "text-white"}">${esc(likedTitle)}</div>
+            <div class="text-[11.5px] text-neutral-400 truncate">📌 ${esc(t("playlist"))} • ${state.library.liked_tracks.length} şarkı</div>
+          </div>
+        </button>
+      `;
+    }
+
+    for (const pl of state.library.playlists) {
+      if (q && !pl.name.toLowerCase().includes(q)) continue;
+      const active = state.page === "playlist" && state.playlistId === pl.id;
+      const cover = pl.tracks[0]?.thumbnail_url;
+      html += `
+        <button onclick="navigate('playlist', '${esc(pl.id)}')" class="w-full flex items-center gap-3 p-2 rounded-lg transition cursor-pointer ${
+          active ? "bg-white/[0.14]" : "hover:bg-white/[0.07]"
+        }">
+          <div class="w-11 h-11 rounded-md bg-[#222228] overflow-hidden flex items-center justify-center text-neutral-400 shrink-0">
+            ${cover ? `<img src="${esc(cover)}" loading="lazy" alt="" class="w-full h-full object-cover" />` : "♫"}
+          </div>
+          <div class="sidebar-label min-w-0 text-left flex-1">
+            <div class="text-[13.5px] font-semibold truncate ${active ? "text-[#FF0033]" : "text-white"}">${esc(pl.name)}</div>
+            <div class="text-[11.5px] text-neutral-400 truncate">${esc(t("playlist"))} • ${pl.tracks.length} şarkı</div>
+          </div>
+        </button>
+      `;
+    }
   }
+
+  if (filter === "all" || filter === "artists") {
+    const artists = getSidebarArtists();
+    for (const art of artists) {
+      if (q && !art.name.toLowerCase().includes(q)) continue;
+      const active =
+        state.page === "artist" &&
+        ((art.id && state.artistId === art.id) ||
+          state.artistNameHint?.toLowerCase() === art.name.toLowerCase());
+      html += `
+        <button onclick="openArtist('${esc(art.id || "")}', '${esc(art.name)}')" class="w-full flex items-center gap-3 p-2 rounded-lg transition cursor-pointer ${
+          active ? "bg-white/[0.14]" : "hover:bg-white/[0.07]"
+        }">
+          <div class="w-11 h-11 rounded-full bg-[#222228] overflow-hidden flex items-center justify-center text-sm font-bold text-neutral-300 shrink-0 border border-white/10">
+            ${
+              art.avatar_url
+                ? `<img src="${esc(art.avatar_url)}" loading="lazy" alt="" class="w-full h-full artist-round" />`
+                : esc(art.name.charAt(0).toUpperCase())
+            }
+          </div>
+          <div class="sidebar-label min-w-0 text-left flex-1">
+            <div class="text-[13.5px] font-semibold truncate ${active ? "text-[#FF0033]" : "text-white"}">${esc(art.name)}</div>
+            <div class="text-[11.5px] text-neutral-400 truncate">Sanatçı</div>
+          </div>
+        </button>
+      `;
+    }
+  }
+
   listEl.innerHTML = html;
+}
+
+function renderQuickAccessTiles() {
+  const curId = state.playback.current?.id;
+  const items = [];
+
+  // 1) Liked Songs tile
+  items.push({
+    kind: "liked",
+    title: t("likedMusic"),
+    cover: null,
+    gradient: true,
+  });
+
+  // 2) User playlists
+  for (const pl of state.library.playlists.slice(0, 2)) {
+    items.push({
+      kind: "playlist",
+      id: pl.id,
+      title: pl.name,
+      cover: pl.tracks[0]?.thumbnail_url || null,
+    });
+  }
+
+  // 3) Followed artists or recent tracks to fill up to 8 tiles (2x4 grid like Spotify Home!)
+  for (const art of (state.library.followed_artists || []).slice(0, 2)) {
+    if (items.length >= 8) break;
+    items.push({
+      kind: "artist",
+      id: art.id,
+      title: art.name,
+      cover: art.avatar_url,
+    });
+  }
+
+  const recentPool = [
+    ...(state.ytHistory || []),
+    ...(state.library.recently_played || []),
+    ...(state.recommendations || []),
+  ];
+  const seenIds = new Set();
+  for (const tr of recentPool) {
+    if (items.length >= 8) break;
+    if (seenIds.has(tr.id)) continue;
+    seenIds.add(tr.id);
+    items.push({
+      kind: "track",
+      track: tr,
+      title: tr.title,
+      cover: tr.thumbnail_url,
+    });
+  }
+
+  if (items.length <= 1) return "";
+
+  return `
+    <div class="quick-grid mb-7">
+      ${items
+        .map((it) => {
+          if (it.kind === "liked") {
+            return `
+              <div onclick="navigate('liked')" class="quick-tile">
+                <div class="w-[52px] h-[52px] bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#FF0033] flex items-center justify-center text-lg text-white shrink-0">♥</div>
+                <div class="text-[13px] font-bold text-white line-clamp-2 leading-tight">${esc(it.title)}</div>
+                <div class="quick-tile-play">▶</div>
+              </div>
+            `;
+          }
+          if (it.kind === "playlist") {
+            return `
+              <div onclick="navigate('playlist', '${esc(it.id)}')" class="quick-tile">
+                <div class="w-[52px] h-[52px] bg-[#222228] flex items-center justify-center text-neutral-400 shrink-0 overflow-hidden">
+                  ${it.cover ? `<img src="${esc(it.cover)}" loading="lazy" alt="" class="w-full h-full object-cover" />` : "♫"}
+                </div>
+                <div class="text-[13px] font-bold text-white line-clamp-2 leading-tight">${esc(it.title)}</div>
+                <div class="quick-tile-play">▶</div>
+              </div>
+            `;
+          }
+          if (it.kind === "artist") {
+            return `
+              <div onclick="openArtist('${esc(it.id || "")}', '${esc(it.title)}')" class="quick-tile">
+                <div class="w-[52px] h-[52px] bg-[#222228] flex items-center justify-center text-neutral-300 shrink-0 overflow-hidden">
+                  ${it.cover ? `<img src="${esc(it.cover)}" loading="lazy" alt="" class="w-full h-full object-cover" />` : "🎤"}
+                </div>
+                <div class="text-[13px] font-bold text-white line-clamp-2 leading-tight">${esc(it.title)}</div>
+                <div class="quick-tile-play">▶</div>
+              </div>
+            `;
+          }
+          const safeJson = esc(JSON.stringify(it.track));
+          const active = curId === it.track.id;
+          return `
+            <div onclick='playTrackJson(${safeJson})' onmouseenter="schedulePrefetch('${esc(it.track.id)}')" onmouseleave="cancelPrefetch()" class="quick-tile ${active ? "active" : ""}">
+              <div class="w-[52px] h-[52px] bg-[#222228] shrink-0 overflow-hidden">
+                ${it.cover ? `<img src="${esc(it.cover)}" loading="lazy" alt="" class="w-full h-full object-cover" />` : ""}
+              </div>
+              <div class="text-[13px] font-bold ${active ? "text-[#FF0033]" : "text-white"} line-clamp-2 leading-tight">${esc(it.title)}</div>
+              <div class="quick-tile-play">▶</div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderArtistCarousel(id, artists) {
+  if (!artists || !artists.length) return "";
+  return `
+    <div id="${id}" class="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth pb-2">
+      ${artists
+        .map((a) => {
+          return `
+            <div onclick="openArtist('${esc(a.id || "")}', '${esc(a.name)}')" class="group w-[160px] shrink-0 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.09] border border-white/[0.05] transition cursor-pointer text-center">
+              <div class="relative w-[132px] h-[132px] mx-auto rounded-full overflow-hidden bg-[#222228] shadow-xl border border-white/10">
+                ${
+                  a.avatar_url
+                    ? `<img src="${esc(a.avatar_url)}" loading="lazy" alt="" class="w-full h-full artist-round group-hover:scale-105 transition duration-300" />`
+                    : `<div class="w-full h-full flex items-center justify-center text-3xl font-bold text-neutral-400">${esc(a.name.charAt(0))}</div>`
+                }
+              </div>
+              <div class="mt-3 text-[14px] font-bold text-white truncate">${esc(a.name)}</div>
+              <div class="mt-0.5 text-[12px] text-neutral-400 truncate">${esc(fmtCount(a.subscriber_count) || "Sanatçı")}</div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
 }
 
 function renderCardCarousel(id, tracks) {
   const curId = state.playback.current?.id;
   return `
-    <div id="${id}" class="flex gap-5 overflow-x-auto no-scrollbar scroll-smooth pb-2">
+    <div id="${id}" class="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth pb-2">
       ${tracks
         .map((t) => {
           const active = curId === t.id;
           const safeJson = esc(JSON.stringify(t));
+          const primaryArtist = (t.artist || "").split(",")[0].trim();
           return `
-            <div onclick='playTrackJson(${safeJson})' onmouseenter="schedulePrefetch('${esc(t.id)}')" onmouseleave="cancelPrefetch()" class="group w-[184px] shrink-0 cursor-pointer">
-              <div class="relative w-[184px] h-[184px] rounded-xl overflow-hidden bg-white/[0.05] border border-white/[0.08] shadow-lg group-hover:border-white/25 transition">
+            <div class="group w-[176px] shrink-0 p-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.09] border border-white/[0.05] transition">
+              <div onclick='playTrackJson(${safeJson})' onmouseenter="schedulePrefetch('${esc(t.id)}')" onmouseleave="cancelPrefetch()" class="relative w-full aspect-square rounded-lg overflow-hidden bg-white/[0.05] shadow-lg cursor-pointer">
                 ${
                   t.thumbnail_url
                     ? `<img src="${esc(t.thumbnail_url)}" loading="lazy" alt="" class="w-full h-full object-cover group-hover:scale-[1.04] transition duration-300" />`
                     : ""
                 }
-                <div class="absolute inset-0 bg-black/20 group-hover:bg-black/45 transition flex items-center justify-center">
-                  <div class="w-12 h-12 rounded-full bg-black/45 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-xl transition-transform group-hover:scale-110">
-                    <svg class="w-6 h-6 ml-0.5 ${
-                      active ? "text-[#FF0033]" : "text-white"
-                    }" fill="currentColor" viewBox="0 0 24 24">
+                <div class="absolute inset-0 bg-black/15 group-hover:bg-black/40 transition flex items-end justify-end p-2.5">
+                  <div class="w-10 h-10 rounded-full bg-[#FF0033] text-white flex items-center justify-center shadow-xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 ${active ? "opacity-100 translate-y-0" : ""} transition-all">
+                    <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z"/>
                     </svg>
                   </div>
                 </div>
               </div>
-              <div class="mt-2.5 text-[14px] font-semibold leading-snug line-clamp-2 ${
+              <div onclick='playTrackJson(${safeJson})' class="mt-2.5 text-[13.5px] font-semibold leading-snug line-clamp-1 cursor-pointer ${
                 active ? "text-[#FF0033]" : "text-white"
               }">${esc(t.title)}</div>
-              <div class="mt-0.5 text-[13px] text-neutral-400 line-clamp-2">${esc(t.artist)}</div>
+              <div onclick="openArtist('${esc(t.artist_id || "")}', '${esc(primaryArtist)}')" class="mt-0.5 text-[12.5px] text-neutral-400 hover:text-white hover:underline line-clamp-1 cursor-pointer">${esc(t.artist)}</div>
             </div>
           `;
         })
@@ -306,27 +649,29 @@ function renderTrackRows(tracks, opts = {}) {
           const playCall = opts.collection
             ? `playCollectionIndex(${idx})`
             : `playTrackJson(${safeTrack})`;
+          const primaryArtist = (t.artist || "").split(",")[0].trim();
           return `
-            <div class="group flex items-center gap-3.5 py-2.5 px-2 rounded-md hover:bg-white/[0.07] transition ${
-              active ? "bg-white/[0.09]" : ""
+            <div onmouseenter="schedulePrefetch('${esc(t.id)}')" onmouseleave="cancelPrefetch()" class="group flex items-center gap-3.5 py-2 px-2.5 rounded-lg hover:bg-white/[0.08] transition ${
+              active ? "bg-white/[0.11]" : ""
             }">
-              <div onclick='${playCall}' class="relative w-11 h-11 rounded overflow-hidden bg-[#181818] shrink-0 cursor-pointer">
+              <span class="w-5 text-xs text-neutral-500 tabular-nums text-right shrink-0">${idx + 1}</span>
+              <div onclick='${playCall}' class="relative w-10 h-10 rounded overflow-hidden bg-[#181818] shrink-0 cursor-pointer">
                 ${
                   t.thumbnail_url
                     ? `<img src="${esc(t.thumbnail_url)}" loading="lazy" alt="" class="w-full h-full object-cover" />`
                     : ""
                 }
-                <div class="absolute inset-0 bg-black/40 ${
+                <div class="absolute inset-0 bg-black/45 ${
                   active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 } flex items-center justify-center transition">
                   <svg class="w-5 h-5 ${active ? "text-[#FF0033]" : "text-white"}" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
               </div>
-              <div onclick='${playCall}' class="flex-1 min-w-0 cursor-pointer">
-                <div class="text-[14px] font-medium truncate ${
+              <div class="flex-1 min-w-0">
+                <div onclick='${playCall}' class="text-[14px] font-medium truncate cursor-pointer ${
                   active ? "text-[#FF0033]" : "text-white"
                 }">${esc(t.title)}</div>
-                <div class="text-[13px] text-neutral-400 truncate">${esc(t.artist)}</div>
+                <div onclick="openArtist('${esc(t.artist_id || "")}', '${esc(primaryArtist)}')" class="text-[12.5px] text-neutral-400 hover:text-white hover:underline truncate cursor-pointer inline-block max-w-full">${esc(t.artist)}</div>
               </div>
               <div class="flex items-center gap-3 shrink-0">
                 <button onclick='toggleLikeJson(${safeTrack})' title="Beğen" class="p-1.5 rounded-full hover:bg-white/10 transition cursor-pointer ${
@@ -377,27 +722,35 @@ function renderMain() {
 
     main.innerHTML = `
       <!-- MOOD CHIPS ROW -->
-      <div class="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1 mb-8">
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
+        <button onclick="clearMood()" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${
+          !state.activeMood
+            ? "bg-white text-black border-white"
+            : "bg-white/[0.08] hover:bg-white/[0.16] text-white border-white/[0.08]"
+        }">Tümü</button>
         ${getMoods().map(([label, query]) => {
           const active = state.activeMood === label;
           return `
-            <button onclick="selectMood('${esc(label)}', '${esc(query)}')" class="shrink-0 px-3.5 py-1.5 rounded-lg text-[13.5px] font-medium border transition cursor-pointer ${
+            <button onclick="selectMood('${esc(label)}', '${esc(query)}')" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${
               active
                 ? "bg-white text-black border-white"
-                : "bg-white/[0.10] hover:bg-white/[0.18] text-white border-white/[0.08]"
+                : "bg-white/[0.08] hover:bg-white/[0.16] text-white border-white/[0.08]"
             }">${esc(label)}</button>
           `;
         }).join("")}
       </div>
 
+      <!-- SPOTIFY-STYLE 2x4 QUICK ACCESS GRID -->
+      ${renderQuickAccessTiles()}
+
       ${
         state.activeMood
           ? `
-        <section class="mb-10">
-          <div class="flex items-end justify-between mb-4">
+        <section class="mb-9">
+          <div class="flex items-end justify-between mb-3">
             <div>
-              <div class="text-xs uppercase tracking-wider text-neutral-400 mb-1">${esc(t("moodEyebrow"))}</div>
-              <h2 class="text-[28px] font-bold leading-tight">${esc(state.activeMood)} ${
+              <div class="text-[11px] uppercase tracking-wider text-neutral-400">${esc(t("moodEyebrow"))}</div>
+              <h2 class="text-[22px] font-bold leading-tight">${esc(state.activeMood)} ${
                 state.loadingMood ? `<span class="text-sm font-normal text-[#FF0033] ml-2">${esc(t("loading"))}</span>` : ""
               }</h2>
             </div>
@@ -411,15 +764,15 @@ function renderMain() {
       ${
         recent.length > 0
           ? `
-        <section class="mb-11">
-          <div class="flex items-end justify-between mb-4">
+        <section class="mb-9">
+          <div class="flex items-end justify-between mb-3">
             <div>
-              <div class="text-xs uppercase tracking-wider text-neutral-400 mb-1">${esc(recentEyebrow)}</div>
-              <h2 class="text-[28px] font-bold leading-tight">${esc(t("listenAgain"))}</h2>
+              <div class="text-[11px] uppercase tracking-wider text-neutral-400">${esc(recentEyebrow)}</div>
+              <h2 class="text-[22px] font-bold leading-tight">${esc(t("listenAgain"))}</h2>
             </div>
             <div class="flex items-center gap-2">
-              <button onclick="scrollCarousel('carousel-recent', -420)" class="w-9 h-9 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-lg text-white cursor-pointer">‹</button>
-              <button onclick="scrollCarousel('carousel-recent', 420)" class="w-9 h-9 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-lg text-white cursor-pointer">›</button>
+              <button onclick="scrollCarousel('carousel-recent', -420)" class="w-8 h-8 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-base text-white cursor-pointer">‹</button>
+              <button onclick="scrollCarousel('carousel-recent', 420)" class="w-8 h-8 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-base text-white cursor-pointer">›</button>
             </div>
           </div>
           ${renderCardCarousel("carousel-recent", recent)}
@@ -428,24 +781,39 @@ function renderMain() {
       }
 
       <section class="mb-8">
-        <div class="flex items-end justify-between mb-4">
+        <div class="flex items-end justify-between mb-3">
           <div>
-            <div class="text-xs uppercase tracking-wider text-neutral-400 mb-1">${
+            <div class="text-[11px] uppercase tracking-wider text-neutral-400">${
               state.loadingHome ? esc(t("loadingUpper")) : esc(t("pickedEyebrow"))
             }</div>
-            <h2 class="text-[28px] font-bold leading-tight">${esc(recTitle)}</h2>
+            <h2 class="text-[22px] font-bold leading-tight">${esc(recTitle)}</h2>
           </div>
-          <div class="flex items-center gap-2.5">
-            <button onclick="refreshHome(true)" ${state.loadingHome ? "disabled" : ""} class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-medium text-white transition cursor-pointer disabled:opacity-60">
+          <div class="flex items-center gap-2">
+            <button onclick="refreshHome(true)" ${state.loadingHome ? "disabled" : ""} class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-medium text-white transition cursor-pointer disabled:opacity-60">
               <svg class="w-3.5 h-3.5 ${state.loadingHome ? "animate-spin text-[#FF0033]" : ""}" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-2.64-6.36L21 8m0-5v5h-5"/></svg>
               <span>${state.loadingHome ? esc(t("refreshing")) : esc(t("refresh"))}</span>
             </button>
-            <button onclick="scrollCarousel('carousel-rec', -420)" class="w-9 h-9 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-lg text-white cursor-pointer">‹</button>
-            <button onclick="scrollCarousel('carousel-rec', 420)" class="w-9 h-9 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-lg text-white cursor-pointer">›</button>
+            <button onclick="scrollCarousel('carousel-rec', -420)" class="w-8 h-8 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-base text-white cursor-pointer">‹</button>
+            <button onclick="scrollCarousel('carousel-rec', 420)" class="w-8 h-8 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-base text-white cursor-pointer">›</button>
           </div>
         </div>
         ${renderCardCarousel("carousel-rec", state.recommendations)}
       </section>
+
+      ${
+        getSidebarArtists().length > 0
+          ? `
+        <section class="mb-6">
+          <div class="flex items-end justify-between mb-3">
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-neutral-400">SANATÇILAR</div>
+              <h2 class="text-[22px] font-bold leading-tight">Favori sanatçıların</h2>
+            </div>
+          </div>
+          ${renderArtistCarousel("carousel-home-artists", getSidebarArtists())}
+        </section>`
+          : ""
+      }
     `;
     return;
   }
@@ -495,14 +863,136 @@ function renderMain() {
   }
 
   if (state.page === "search") {
+    currentCollectionTracks = state.searchResults;
     main.innerHTML = `
-      <h1 class="text-2xl font-bold mb-4">Arama sonuçları ${
-        state.searching ? '<span class="text-sm font-normal text-[#FF0033] ml-2">aranıyor...</span>' : ""
-      }</h1>
+      <div class="mb-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-400 mb-1">ARAMA SONUÇLARI</div>
+        <h1 class="text-2xl font-bold">"${esc(state.searchQuery)}" ${
+          state.searching ? '<span class="text-sm font-normal text-[#FF0033] ml-2">aranıyor...</span>' : ""
+        }</h1>
+      </div>
+
       ${
-        state.searchResults.length > 0
-          ? renderTrackRows(state.searchResults)
-          : `<p class="text-sm text-neutral-400">Üstteki arama çubuğuna bir şarkı veya sanatçı yazıp Enter'a bas.</p>`
+        state.searchArtists && state.searchArtists.length > 0
+          ? `
+        <section class="mb-8">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-bold text-white">Sanatçılar</h2>
+            <span class="text-xs text-neutral-400">Şarkılarını görmek için sanatçıya tıkla</span>
+          </div>
+          ${renderArtistCarousel("carousel-search-artists", state.searchArtists)}
+        </section>`
+          : ""
+      }
+
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-bold text-white">Şarkılar</h2>
+          ${
+            state.searchResults.length > 0
+              ? `<button onclick="playCollectionIndex(0)" class="px-4 py-1.5 rounded-full bg-white text-black text-xs font-semibold cursor-pointer">▶ Tümünü Çal</button>`
+              : ""
+          }
+        </div>
+        ${
+          state.searchResults.length > 0
+            ? renderTrackRows(state.searchResults)
+            : state.searching
+            ? `<p class="text-sm text-neutral-400">Aranıyor...</p>`
+            : `<p class="text-sm text-neutral-400">Sonuç bulunamadı. Üstteki arama çubuğuna bir şarkı veya sanatçı yazıp Enter'a bas.</p>`
+        }
+      </section>
+    `;
+    return;
+  }
+
+  if (state.page === "artist") {
+    const art = state.artistDetail || {
+      id: state.artistId || "",
+      name: state.artistNameHint || "Sanatçı",
+      avatar_url: null,
+      description: null,
+      subscriber_count: null,
+      tracks: [],
+      similar_artists: [],
+    };
+    currentCollectionTracks = art.tracks || [];
+    const followed = isArtistFollowed(art.id, art.name);
+    const safeArtistSummary = esc(
+      JSON.stringify({
+        id: art.id || art.name,
+        name: art.name,
+        avatar_url: art.avatar_url || currentCollectionTracks[0]?.thumbnail_url || null,
+        subscriber_count: art.subscriber_count || null,
+      })
+    );
+
+    main.innerHTML = `
+      <!-- ARTIST HERO BANNER -->
+      <div class="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#2a0c18] via-[#15151c] to-[#0c0c10] border border-white/10 p-6 mb-7 flex flex-col sm:flex-row items-center sm:items-end gap-6 shadow-2xl">
+        <div class="w-36 h-36 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-[#222228] border-2 border-white/20 shadow-2xl shrink-0">
+          ${
+            art.avatar_url || currentCollectionTracks[0]?.thumbnail_url
+              ? `<img src="${esc(art.avatar_url || currentCollectionTracks[0]?.thumbnail_url)}" alt="" class="w-full h-full artist-round" />`
+              : `<div class="w-full h-full flex items-center justify-center text-5xl font-bold text-neutral-400">${esc(art.name.charAt(0))}</div>`
+          }
+        </div>
+        <div class="flex-1 min-w-0 text-center sm:text-left">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FF0033]/20 border border-[#FF0033]/40 text-[11px] font-bold text-[#FF4D6D] mb-2">
+            <span>✓ Doğrulanmış Sanatçı</span>
+          </div>
+          <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white truncate">${esc(art.name)}</h1>
+          ${
+            art.subscriber_count
+              ? `<div class="text-sm text-neutral-300 mt-1.5">${esc(fmtCount(art.subscriber_count))}</div>`
+              : `<div class="text-sm text-neutral-400 mt-1.5">${currentCollectionTracks.length} popüler parça</div>`
+          }
+          ${
+            art.description
+              ? `<p class="text-xs text-neutral-400 mt-2 line-clamp-2 max-w-2xl">${esc(art.description)}</p>`
+              : ""
+          }
+          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-5">
+            ${
+              currentCollectionTracks.length > 0
+                ? `<button onclick="playCollectionIndex(0)" class="px-6 py-2.5 rounded-full bg-[#FF0033] hover:bg-[#e0002d] text-white text-sm font-bold shadow-lg transition cursor-pointer">▶ Oynat</button>`
+                : ""
+            }
+            <button onclick='toggleFollowArtistObj(${safeArtistSummary})' class="px-5 py-2 rounded-full border ${
+              followed
+                ? "border-[#FF0033] bg-[#FF0033]/15 text-white"
+                : "border-white/25 hover:border-white text-white"
+            } text-xs font-semibold transition cursor-pointer">
+              ${followed ? "✓ Takip Ediliyor" : "+ Takip Et"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ARTIST POPULAR TRACKS -->
+      <section class="mb-8">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-bold text-white">Popüler Şarkılar ${
+            state.loadingArtist ? '<span class="text-sm font-normal text-[#FF0033] ml-2">yükleniyor...</span>' : ""
+          }</h2>
+        </div>
+        ${
+          currentCollectionTracks.length > 0
+            ? renderTrackRows(currentCollectionTracks, { collection: true })
+            : state.loadingArtist
+            ? `<p class="text-sm text-neutral-400">Sanatçının şarkıları yükleniyor...</p>`
+            : `<p class="text-sm text-neutral-400">Bu sanatçı için parça bulunamadı.</p>`
+        }
+      </section>
+
+      ${
+        art.similar_artists && art.similar_artists.length > 0
+          ? `
+        <section class="mb-6">
+          <h2 class="text-xl font-bold text-white mb-3">Hayranların Beğendiği Diğer Sanatçılar</h2>
+          ${renderArtistCarousel("carousel-similar-artists", art.similar_artists)}
+        </section>`
+          : ""
       }
     `;
     return;
@@ -746,6 +1236,7 @@ function renderMain() {
 function renderQueue() {
   if (!state.queueOpen) return;
   const list = document.getElementById("queue-list");
+  if (!list) return;
   const q = state.playback.queue || [];
   const curIdx = state.playback.current_index;
   if (q.length === 0) {
@@ -756,7 +1247,7 @@ function renderQueue() {
     .map((t, i) => {
       const active = i === curIdx;
       return `
-        <div onclick="selectQueueIndex(${i})" class="flex items-center gap-2.5 p-1.5 rounded-md cursor-pointer transition ${
+        <div onclick="selectQueueIndex(${i})" onmouseenter="schedulePrefetch('${esc(t.id)}')" onmouseleave="cancelPrefetch()" class="flex items-center gap-2.5 p-1.5 rounded-md cursor-pointer transition ${
           active ? "bg-white/15" : "hover:bg-white/[0.07]"
         }">
           <img src="${esc(t.thumbnail_url || "")}" loading="lazy" alt="" class="w-9 h-9 rounded object-cover bg-neutral-800 shrink-0" />
@@ -770,23 +1261,183 @@ function renderQueue() {
     .join("");
 }
 
+async function ensureNowPlayingArtistLoaded() {
+  const cur = state.playback.current;
+  if (!cur) return;
+  const primaryName = (cur.artist || "").split(",")[0].trim();
+  const key = `${cur.artist_id || ""}::${primaryName.toLowerCase()}`;
+  if (state.nowPlayingArtistKey === key) return;
+  state.nowPlayingArtistKey = key;
+  try {
+    const info = await invoke("get_artist", {
+      artistId: cur.artist_id || "",
+      artistName: primaryName || null,
+    });
+    if (state.nowPlayingArtistKey === key) {
+      state.nowPlayingArtist = info;
+      renderNowPlayingPanel();
+    }
+  } catch (_) {}
+}
+
+function renderNowPlayingPanel() {
+  const panel = document.getElementById("now-playing-panel");
+  if (!panel) return;
+  const cur = state.playback.current;
+  if (!cur) {
+    panel.innerHTML = `
+      <div class="h-full flex flex-col items-center justify-center text-center py-12 px-4">
+        <div class="w-16 h-16 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-2xl text-neutral-400 mb-3">♫</div>
+        <div class="text-sm font-semibold text-white">Henüz bir parça çalmıyor</div>
+        <div class="text-xs text-neutral-400 mt-1">Bir şarkı başlattığında kapak görseli, şarkı sözleri ve sanatçı kartı burada görünür.</div>
+      </div>
+    `;
+    return;
+  }
+
+  ensureNowPlayingArtistLoaded();
+  const primaryName = (cur.artist || "").split(",")[0].trim();
+  const liked = isLiked(cur.id);
+  const safeTrack = esc(JSON.stringify(cur));
+  const artInfo = state.nowPlayingArtist;
+  const artId = cur.artist_id || artInfo?.id || "";
+  const artAvatar = artInfo?.avatar_url || cur.thumbnail_url || "";
+  const artSubs = artInfo?.subscriber_count ? fmtCount(artInfo.subscriber_count) : "Sanatçı";
+  const artFollowed = isArtistFollowed(artId, primaryName);
+  const safeArtistSummary = esc(
+    JSON.stringify({
+      id: artId || primaryName,
+      name: primaryName,
+      avatar_url: artAvatar || null,
+      subscriber_count: artInfo?.subscriber_count || null,
+    })
+  );
+
+  const q = state.playback.queue || [];
+  const nextIdx = (state.playback.current_index ?? -1) + 1;
+  const nextTrack = q[nextIdx] || null;
+
+  panel.innerHTML = `
+    <!-- 1. LARGE ALBUM ARTWORK CARD -->
+    <div class="rounded-xl overflow-hidden bg-[#18181f] border border-white/10 shadow-2xl">
+      ${
+        cur.thumbnail_url
+          ? `<img src="${esc(cur.thumbnail_url)}" alt="" class="w-full aspect-square object-cover" />`
+          : `<div class="w-full aspect-square flex items-center justify-center text-4xl text-neutral-500">♫</div>`
+      }
+    </div>
+
+    <!-- 2. TRACK TITLE + ARTIST + LIKE BUTTON -->
+    <div class="flex items-start justify-between gap-2 pt-1">
+      <div class="min-w-0">
+        <div class="text-[17px] font-bold text-white leading-snug truncate">${esc(cur.title)}</div>
+        <div onclick="openArtist('${esc(artId)}', '${esc(primaryName)}')" class="text-[13.5px] text-neutral-400 hover:text-white hover:underline truncate cursor-pointer mt-0.5">${esc(cur.artist)}</div>
+      </div>
+      <button onclick='toggleLikeJson(${safeTrack})' title="Beğen" class="p-1.5 rounded-full hover:bg-white/10 transition cursor-pointer shrink-0 ${
+        liked ? "text-[#FF0033]" : "text-neutral-400 hover:text-white"
+      }">
+        <svg class="w-5 h-5" fill="${liked ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg>
+      </button>
+    </div>
+
+    <!-- 3. LIVE LYRICS ACCORDION CARD (Spotify Right-Panel Red Card!) -->
+    <div onclick="switchDrawerTab('lyrics')" class="rounded-xl bg-gradient-to-br from-[#6b091e] to-[#360611] border border-[#FF0033]/30 p-3.5 cursor-pointer hover:border-[#FF0033]/60 transition shadow-lg">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-xs font-bold uppercase tracking-wider text-white">Şarkı Sözleri</span>
+        <span class="text-[11px] font-semibold text-white/80 hover:text-white">Tamamını aç →</span>
+      </div>
+      <div id="now-playing-lyric-preview" class="text-[13px] font-semibold text-white/95 line-clamp-2 min-h-[2.2rem]">
+        ${
+          state.activeLyricIdx >= 0 && state.lyricsData?.synced?.[state.activeLyricIdx]
+            ? esc(state.lyricsData.synced[state.activeLyricIdx].text)
+            : state.lyricsData?.body
+            ? esc(state.lyricsData.body.split("\n").slice(0, 2).join(" • "))
+            : "Senkronize şarkı sözlerini görmek için tıkla..."
+        }
+      </div>
+    </div>
+
+    <!-- 4. ABOUT THE ARTIST CARD (Spotify "Sanatçı hakkında" Card!) -->
+    <div class="rounded-xl overflow-hidden bg-[#181820] border border-white/10 shadow-lg">
+      <div onclick="openArtist('${esc(artId)}', '${esc(primaryName)}')" class="relative h-36 bg-[#22222a] overflow-hidden cursor-pointer group">
+        ${
+          artAvatar
+            ? `<img src="${esc(artAvatar)}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" />`
+            : ""
+        }
+        <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/30"></div>
+        <div class="absolute top-3 left-3 text-xs font-bold text-white drop-shadow">Sanatçı hakkında</div>
+      </div>
+      <div class="p-3.5 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <div onclick="openArtist('${esc(artId)}', '${esc(primaryName)}')" class="min-w-0 cursor-pointer">
+            <div class="text-[15px] font-bold text-white hover:underline truncate">${esc(primaryName)}</div>
+            <div class="text-xs text-neutral-400 truncate">${esc(artSubs)}</div>
+          </div>
+          <button onclick='toggleFollowArtistObj(${safeArtistSummary})' class="px-3.5 py-1 rounded-full border ${
+            artFollowed
+              ? "border-[#FF0033] bg-[#FF0033]/15 text-white"
+              : "border-white/25 hover:border-white text-white"
+          } text-xs font-semibold transition cursor-pointer shrink-0">
+            ${artFollowed ? "Takip Ediliyor" : "Takip Et"}
+          </button>
+        </div>
+        ${
+          artInfo?.description
+            ? `<p class="text-xs text-neutral-400 line-clamp-3 leading-relaxed">${esc(artInfo.description)}</p>`
+            : `<p class="text-xs text-neutral-400">${esc(primaryName)} sanatçısının popüler şarkılarını ve benzer sanatçıları görmek için karta tıkla.</p>`
+        }
+      </div>
+    </div>
+
+    <!-- 5. NEXT IN QUEUE PREVIEW CARD -->
+    ${
+      nextTrack
+        ? `
+      <div class="rounded-xl bg-[#181820] border border-white/10 p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-white">Sıradaki</span>
+          <button onclick="switchDrawerTab('queue')" class="text-[11px] font-semibold text-neutral-400 hover:text-white cursor-pointer">Sırayı aç</button>
+        </div>
+        <div onclick="selectQueueIndex(${nextIdx})" class="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-white/[0.07] transition cursor-pointer">
+          <img src="${esc(nextTrack.thumbnail_url || "")}" alt="" class="w-10 h-10 rounded object-cover bg-neutral-800 shrink-0" />
+          <div class="min-w-0 flex-1">
+            <div class="text-xs font-semibold text-white truncate">${esc(nextTrack.title)}</div>
+            <div class="text-[11px] text-neutral-400 truncate">${esc(nextTrack.artist)}</div>
+          </div>
+        </div>
+      </div>`
+        : ""
+    }
+  `;
+}
+
 function switchDrawerTab(tab) {
   state.drawerTab = tab;
+  const nTab = document.getElementById("tab-drawer-now");
   const qTab = document.getElementById("tab-drawer-queue");
   const lTab = document.getElementById("tab-drawer-lyrics");
+  const nPanel = document.getElementById("now-playing-panel");
   const qList = document.getElementById("queue-list");
   const lPanel = document.getElementById("lyrics-panel");
-  if (tab === "queue") {
-    qTab.className = "text-xs font-bold tracking-wider uppercase text-white border-b-2 border-white pb-1 cursor-pointer";
-    lTab.className = "text-xs font-bold tracking-wider uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer";
-    qList.classList.remove("hidden");
-    lPanel.classList.add("hidden");
+
+  const activeCls = "text-xs font-bold tracking-wider uppercase text-white border-b-2 border-[#FF0033] pb-1 cursor-pointer";
+  const idleCls = "text-xs font-bold tracking-wider uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer";
+
+  if (nTab) nTab.className = tab === "now" ? activeCls : idleCls;
+  if (lTab) lTab.className = tab === "lyrics" ? activeCls : idleCls;
+  if (qTab) qTab.className = tab === "queue" ? activeCls : idleCls;
+
+  if (nPanel) nPanel.classList.toggle("hidden", tab !== "now");
+  if (lPanel) lPanel.classList.toggle("hidden", tab !== "lyrics");
+  if (qList) qList.classList.toggle("hidden", tab !== "queue");
+
+  if (tab === "now") {
+    renderNowPlayingPanel();
+    loadLyricsForCurrent();
+  } else if (tab === "queue") {
     renderQueue();
   } else {
-    lTab.className = "text-xs font-bold tracking-wider uppercase text-white border-b-2 border-white pb-1 cursor-pointer";
-    qTab.className = "text-xs font-bold tracking-wider uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer";
-    qList.classList.add("hidden");
-    lPanel.classList.remove("hidden");
     loadLyricsForCurrent();
   }
 }
@@ -876,6 +1527,10 @@ function updateSyncedLyricsHighlight(posSecs) {
   if (miniLine) {
     miniLine.textContent = idx >= 0 ? synced[idx].text : "";
   }
+  const nowPreview = document.getElementById("now-playing-lyric-preview");
+  if (nowPreview && idx >= 0 && synced[idx]) {
+    nowPreview.textContent = synced[idx].text;
+  }
   if (idx === state.activeLyricIdx) return;
   const prevEl = document.getElementById(`lyric-line-${state.activeLyricIdx}`);
   if (prevEl) {
@@ -893,19 +1548,16 @@ function updateSyncedLyricsHighlight(posSecs) {
 
 function renderPlayerBar() {
   const pb = state.playback;
-  const bar = document.getElementById("player-bar");
-  if (!pb.current && !pb.is_playing && !pb.is_buffering) {
-    bar.classList.add("hidden");
-    return;
-  }
-  bar.classList.remove("hidden");
-
   const dur = Math.max(1, pb.duration_secs || pb.current?.duration_secs || 1);
   const pos = Math.min(dur, pb.position_secs || 0);
-  const pct = (pos / dur) * 100;
+  const pct = pb.current ? (pos / dur) * 100 : 0;
 
   document.getElementById("seek-bar-fill").style.width = `${pct}%`;
   document.getElementById("player-time").textContent = `${fmtSec(pos)} / ${fmtSec(dur)}`;
+  const curTimeEl = document.getElementById("player-time-cur");
+  const durTimeEl = document.getElementById("player-time-dur");
+  if (curTimeEl) curTimeEl.textContent = pb.current ? fmtSec(pos) : "0:00";
+  if (durTimeEl) durTimeEl.textContent = pb.current ? fmtSec(dur) : "0:00";
   const miniSeek = document.getElementById("mini-seek-fill");
   if (miniSeek) miniSeek.style.width = `${pct}%`;
   updateSyncedLyricsHighlight(pos);
@@ -994,10 +1646,14 @@ async function syncPlayback() {
   state.playback = await invoke("get_playback_state");
   renderPlayerBar();
   if (state.queueOpen) {
-    if (state.drawerTab === "queue" && (prevId !== state.playback.current?.id || prevQLen !== state.playback.queue.length)) {
-      renderQueue();
-    } else if (state.drawerTab === "lyrics" && prevId !== state.playback.current?.id) {
+    if (prevId !== state.playback.current?.id) {
+      renderNowPlayingPanel();
       loadLyricsForCurrent();
+      renderQueue();
+    } else if (state.drawerTab === "queue" && prevQLen !== state.playback.queue.length) {
+      renderQueue();
+    } else if (state.drawerTab === "now" && prevQLen !== state.playback.queue.length) {
+      renderNowPlayingPanel();
     }
   }
   if (prevId !== state.playback.current?.id) {
@@ -1077,7 +1733,7 @@ function downloadUserscript() {
   const script = `// ==UserScript==
 // @name         YTM Native — Open Links in Desktop App
 // @namespace    https://github.com/Rbg4445/Ytmnative
-// @version      2.0.0
+// @version      3.0.0
 // @description  Soft-opens actionable YouTube Music links via ytmd:// protocol
 // @match        *://music.youtube.com/*
 // @grant        GM_registerMenuCommand
@@ -1160,9 +1816,10 @@ async function playTrackJson(track) {
   state.playback.is_playing = false;
   state.playback.position_secs = 0;
   renderPlayerBar();
+  renderNowPlayingPanel();
   invoke("play_track", { track }).catch((e) => showBanner(`⚠ ${e}`, true));
   schedulePoll();
-  if (state.queueOpen && state.drawerTab === "lyrics") loadLyricsForCurrent();
+  loadLyricsForCurrent();
 }
 
 async function playCollectionIndex(idx) {
@@ -1415,8 +2072,8 @@ async function installUpdate() {
 document.getElementById("btn-toggle-sidebar").addEventListener("click", () => {
   state.sidebarExpanded = !state.sidebarExpanded;
   const sb = document.getElementById("sidebar");
-  sb.classList.toggle("w-[240px]", state.sidebarExpanded);
-  sb.classList.toggle("w-[72px]", !state.sidebarExpanded);
+  sb.classList.toggle("w-[280px]", state.sidebarExpanded);
+  sb.classList.toggle("w-[76px]", !state.sidebarExpanded);
   document.querySelectorAll(".sidebar-label").forEach((el) => {
     el.classList.toggle("hidden", !state.sidebarExpanded);
   });
@@ -1473,9 +2130,13 @@ async function executeSearch(rawQuery) {
   hideSuggestions();
   state.searchQuery = query;
   state.searching = true;
+  state.searchArtists = [];
+  state.searchResults = [];
   navigate("search");
   try {
-    state.searchResults = await invoke("search_songs", { query });
+    const bundle = await invoke("search_all", { query });
+    state.searchArtists = bundle.artists || [];
+    state.searchResults = bundle.tracks || [];
   } catch (err) {
     showBanner(`⚠ Arama hatası: ${err}`, true);
   }
@@ -1739,6 +2400,7 @@ function changeLanguage(lang) {
 
   renderNav();
   renderMain();
+  renderNowPlayingPanel();
   refreshHome();
   runAutoUpdateOnStartup();
 })();

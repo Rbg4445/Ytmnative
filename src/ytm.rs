@@ -8,12 +8,16 @@ use anyhow::{anyhow, Context, Result};
 use futures::FutureExt;
 use reqwest::header::USER_AGENT;
 use rustypipe::client::{ClientType, RustyPipe, RustyPipeBuilder};
-use rustypipe::model::TrackItem;
+use rustypipe::model::{ArtistItem, TrackItem};
+use sha1::{Digest, Sha1};
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tracing::{debug, warn};
 
-use crate::model::{HlsSegment, ResolvedStream, StreamKind, StreamSource, Track};
+use crate::model::{
+    ArtistDetailDto, ArtistSummary, HlsSegment, ResolvedStream, SearchBundleDto, StreamKind,
+    StreamSource, Track,
+};
 
 /// Maximum number of pre-resolved stream URLs kept in RAM (supports hover-prefetch + next 2 tracks).
 const STREAM_CACHE_CAP: usize = 12;
@@ -24,10 +28,11 @@ pub struct YtmClient {
     http: reqwest::Client,
     stream_cache: Arc<Mutex<VecDeque<ResolvedStream>>>,
     visitor_data: Arc<Mutex<Option<String>>>,
+    raw_cookie: Arc<Mutex<Option<String>>>,
 }
 
 impl YtmClient {
-    pub fn new() -> Result<Self> {
+    pub fn new(initial_cookie: Option<String>) -> Result<Self> {
         let mut builder = RustyPipeBuilder::new();
         let rp_dir = persistent_rp_dir();
         let _ = std::fs::create_dir_all(&rp_dir);
@@ -45,7 +50,12 @@ impl YtmClient {
             http,
             stream_cache: Arc::new(Mutex::new(VecDeque::with_capacity(STREAM_CACHE_CAP))),
             visitor_data: Arc::new(Mutex::new(None)),
+            raw_cookie: Arc::new(Mutex::new(initial_cookie)),
         })
+    }
+
+    pub async fn get_raw_cookie(&self) -> Option<String> {
+        self.raw_cookie.lock().await.clone()
     }
 
     /// Check whether a valid YouTube cookie session is stored in RustyPipe.
@@ -54,24 +64,33 @@ impl YtmClient {
     }
 
     /// Connect YouTube account using either Netscape cookies.txt content or a raw Cookie header.
-    pub async fn connect_with_cookies(&self, raw: &str) -> Result<()> {
+    pub async fn connect_with_cookies(&self, raw: &str) -> Result<String> {
         let trimmed = raw.trim();
         if trimmed.is_empty() {
             return Err(anyhow!("Çerez (cookie) verisi boş"));
         }
-        if trimmed.contains('\t') || trimmed.starts_with("# Netscape") || trimmed.starts_with("# HTTP") {
+        let header_cookie = if trimmed.contains('\t')
+            || trimmed.starts_with("# Netscape")
+            || trimmed.starts_with("# HTTP")
+        {
             Self::safe_rp(self.rp.user_auth_set_cookie_txt(trimmed)).await?;
+            parse_netscape_to_cookie_header(trimmed)
         } else {
             Self::safe_rp(self.rp.user_auth_set_cookie(trimmed.to_string())).await?;
-        }
+            trimmed.to_string()
+        };
         Self::safe_rp(self.rp.user_auth_check_cookie())
             .await
             .context("Çerez geçersiz veya oturum süresi dolmuş")?;
-        Ok(())
+        {
+            let mut guard = self.raw_cookie.lock().await;
+            *guard = Some(header_cookie.clone());
+        }
+        Ok(header_cookie)
     }
 
     /// One-click YouTube account connection by reading browser cookies via yt-dlp.
-    pub async fn connect_from_browser(&self, browser: &str) -> Result<()> {
+    pub async fn connect_from_browser(&self, browser: &str) -> Result<String> {
         let ytdlp_bin = find_ytdlp_bin();
         let tmp_cookie = std::env::temp_dir().join(format!("ytm_ck_{}.txt", std::process::id()));
 
@@ -112,6 +131,8 @@ impl YtmClient {
     /// Disconnect saved YouTube account cookies.
     pub async fn disconnect_youtube(&self) -> Result<()> {
         let _ = Self::safe_rp(self.rp.user_auth_remove_cookie()).await;
+        let mut guard = self.raw_cookie.lock().await;
+        *guard = None;
         Ok(())
     }
 
@@ -180,6 +201,144 @@ impl YtmClient {
             .map(track_from_item)
             .collect();
         Ok(tracks)
+    }
+
+    /// Combined search returning both matching Artists and Tracks in parallel (~300ms).
+    pub async fn search_all(&self, query: &str) -> Result<SearchBundleDto> {
+        let q = query.trim();
+        if q.is_empty() {
+            return Ok(SearchBundleDto {
+                artists: Vec::new(),
+                tracks: Vec::new(),
+            });
+        }
+
+        let q1 = self.rp.query();
+        let q2 = self.rp.query();
+        let (artists_res, tracks_res) = tokio::join!(
+            Self::safe_rp(q1.music_search_artists(q)),
+            Self::safe_rp(q2.music_search_tracks(q))
+        );
+
+        let mut artists: Vec<ArtistSummary> = artists_res
+            .ok()
+            .map(|r| {
+                r.items
+                    .items
+                    .into_iter()
+                    .take(8)
+                    .map(artist_from_item)
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let tracks: Vec<Track> = tracks_res
+            .map(|r| {
+                r.items
+                    .items
+                    .into_iter()
+                    .take(25)
+                    .map(track_from_item)
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        // Fallback: if artist search returned empty, synthesize artist cards from the top tracks' artist_id
+        if artists.is_empty() {
+            let mut seen = std::collections::HashSet::new();
+            for t in &tracks {
+                if let Some(aid) = &t.artist_id {
+                    if seen.insert(aid.clone()) {
+                        artists.push(ArtistSummary {
+                            id: aid.clone(),
+                            name: t.artist.split(',').next().unwrap_or(&t.artist).trim().to_string(),
+                            avatar_url: t.thumbnail_url.clone(),
+                            subscriber_count: None,
+                        });
+                        if artists.len() >= 5 {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(SearchBundleDto { artists, tracks })
+    }
+
+    /// Fetch an artist's profile page, top songs, and similar artists.
+    pub async fn fetch_artist(&self, artist_id: &str, artist_name_hint: Option<&str>) -> Result<ArtistDetailDto> {
+        let id = artist_id.trim();
+        if !id.is_empty() {
+            if let Ok(artist) = Self::safe_rp(self.rp.query().music_artist(id, false)).await {
+                let avatar_url = artist
+                    .header_image
+                    .iter()
+                    .max_by_key(|t| t.width)
+                    .or_else(|| artist.header_image.first())
+                    .map(|t| t.url.clone());
+
+                let mut tracks: Vec<Track> = artist
+                    .tracks
+                    .into_iter()
+                    .take(35)
+                    .map(track_from_item)
+                    .collect();
+
+                // If the artist page shelf had very few tracks, supplement via search or tracks_playlist_id
+                if tracks.len() < 10 {
+                    if let Some(pl_id) = &artist.tracks_playlist_id {
+                        if let Ok(pl) = Self::safe_rp(self.rp.query().music_playlist(pl_id)).await {
+                            let mut seen: std::collections::HashSet<String> =
+                                tracks.iter().map(|t| t.id.clone()).collect();
+                            for item in pl.tracks.items.into_iter().take(35) {
+                                if seen.insert(item.id.clone()) {
+                                    tracks.push(track_from_item(item));
+                                }
+                            }
+                        }
+                    }
+                }
+                if tracks.is_empty() {
+                    if let Ok(extra) = self.search_songs(&artist.name).await {
+                        tracks = extra;
+                    }
+                }
+
+                let similar_artists = artist
+                    .similar_artists
+                    .into_iter()
+                    .take(10)
+                    .map(artist_from_item)
+                    .collect();
+
+                return Ok(ArtistDetailDto {
+                    id: artist.id,
+                    name: artist.name,
+                    avatar_url,
+                    description: artist.description,
+                    subscriber_count: artist.subscriber_count,
+                    tracks,
+                    similar_artists,
+                });
+            }
+        }
+
+        // Fallback if artist_id wasn't a browseable channel ID: search by artist name
+        let query_name = artist_name_hint
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or(id);
+        let tracks = self.search_songs(query_name).await.unwrap_or_default();
+        let avatar_url = tracks.first().and_then(|t| t.thumbnail_url.clone());
+        Ok(ArtistDetailDto {
+            id: id.to_string(),
+            name: query_name.to_string(),
+            avatar_url,
+            description: None,
+            subscriber_count: None,
+            tracks,
+            similar_artists: Vec::new(),
+        })
     }
 
     /// Ultra-fast (~50ms) YouTube autocomplete search suggestions.
@@ -392,23 +551,28 @@ impl YtmClient {
             }
         }
 
-        // Run pure-Rust VISIONOS HLS (~350-450ms!) and RustyPipe iOS loudness (~300ms) in parallel!
-        let (vision_res, ios_res) = tokio::join!(
+        let (vision_res, ios_res, tv_res) = tokio::join!(
             self.resolve_via_visionos_direct(video_id),
-            self.fetch_ios_loudness_and_hls(video_id)
+            self.fetch_ios_loudness_and_hls(video_id),
+            self.resolve_via_tv_or_android_vr(video_id)
         );
 
-        let resolved = match (vision_res, ios_res) {
-            (Ok(mut stream), ios_out) => {
+        let resolved = match (vision_res, ios_res, tv_res) {
+            (Ok(mut stream), ios_out, _) => {
                 if let Ok((_, loudness)) = ios_out {
                     stream.loudness_db = stream.loudness_db.or(loudness);
                 }
                 stream
             }
-            (Err(_), Ok((Some(hls_stream), _))) => hls_stream,
-            (Err(vision_err), ios_out) => {
+            (Err(_), Ok((Some(hls_stream), _)), _) => hls_stream,
+            (Err(_), ios_out, Ok(mut tv_stream)) => {
                 let loudness = ios_out.ok().and_then(|(_, l)| l);
-                warn!("Pure-Rust VISIONOS failed for {video_id}: {vision_err}; trying yt-dlp fallback...");
+                tv_stream.loudness_db = tv_stream.loudness_db.or(loudness);
+                tv_stream
+            }
+            (Err(vision_err), ios_out, Err(_)) => {
+                let loudness = ios_out.ok().and_then(|(_, l)| l);
+                warn!("Pure-Rust resolvers failed for {video_id}: {vision_err}; trying yt-dlp fallback...");
                 match self.resolve_via_ytdlp_fast(video_id).await {
                     Ok(mut s) => {
                         s.loudness_db = loudness;
@@ -496,14 +660,23 @@ impl YtmClient {
             "racyCheckOk": true
         });
 
-        let resp = self
+        let mut req = self
             .http
             .post("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
             .header(USER_AGENT, VISION_UA)
             .header("X-Youtube-Client-Name", "101")
             .header("X-Youtube-Client-Version", "1.02")
             .header("X-Goog-Visitor-Id", &vd)
-            .header("Origin", "https://www.youtube.com")
+            .header("Origin", "https://www.youtube.com");
+
+        if let Some(cookie) = self.get_raw_cookie().await {
+            if let Some(auth) = compute_sapisidhash(&cookie, "https://www.youtube.com") {
+                req = req.header("Authorization", auth);
+            }
+            req = req.header("Cookie", cookie);
+        }
+
+        let resp = req
             .json(&body)
             .send()
             .await
@@ -594,32 +767,174 @@ impl YtmClient {
                 }
             }
         }
+
+        // Also check direct M4A/AAC stream from RustyPipe iOS player (~300ms)!
+        if let Some(best_m4a) = player
+            .audio_streams
+            .iter()
+            .filter(|s| s.format == rustypipe::model::AudioFormat::M4a)
+            .max_by_key(|s| s.bitrate)
+        {
+            return Ok((
+                Some(ResolvedStream {
+                    track_id: video_id.to_string(),
+                    kind: StreamKind::Direct {
+                        url: best_m4a.url.clone(),
+                        content_length: Some(best_m4a.size),
+                    },
+                    mime: "audio/mp4".to_string(),
+                    bitrate: best_m4a.bitrate,
+                    duration_secs,
+                    loudness_db: loudness,
+                    user_agent: Some(ios_ua),
+                    source: StreamSource::RustyPipe,
+                    resolved_at: Instant::now(),
+                }),
+                loudness,
+            ));
+        }
         Ok((None, loudness))
+    }
+
+    /// Secondary pure-Rust Innertube fallback using ANDROID_VR & TV_SIMPLY (~350ms, no bot challenge).
+    async fn resolve_via_tv_or_android_vr(&self, video_id: &str) -> Result<ResolvedStream> {
+        let vd = self.get_visitor_data().await.unwrap_or_default();
+        const VR_UA: &str = "com.google.android.apps.youtube.vr.oculus/1.60.19 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
+
+        let body = serde_json::json!({
+            "context": {
+                "client": {
+                    "clientName": "ANDROID_VR",
+                    "clientVersion": "1.60.19",
+                    "deviceMake": "Oculus",
+                    "deviceModel": "Quest 3",
+                    "osName": "Android",
+                    "osVersion": "12L",
+                    "androidSdkVersion": 32,
+                    "hl": "en",
+                    "visitorData": vd
+                }
+            },
+            "videoId": video_id,
+            "contentCheckOk": true,
+            "racyCheckOk": true
+        });
+
+        let mut req = self
+            .http
+            .post("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
+            .header(USER_AGENT, VR_UA)
+            .header("X-Youtube-Client-Name", "28")
+            .header("X-Youtube-Client-Version", "1.60.19")
+            .header("X-Goog-Visitor-Id", &vd);
+
+        if let Some(cookie) = self.get_raw_cookie().await {
+            if let Some(auth) = compute_sapisidhash(&cookie, "https://www.youtube.com") {
+                req = req.header("Authorization", auth);
+            }
+            req = req.header("Cookie", cookie);
+        }
+
+        let resp = req.json(&body).send().await?;
+        let json: serde_json::Value = resp.json().await?;
+        if json
+            .get("playabilityStatus")
+            .and_then(|p| p.get("status"))
+            .and_then(|s| s.as_str())
+            != Some("OK")
+        {
+            return Err(anyhow!("ANDROID_VR not OK"));
+        }
+
+        let loudness_db = json
+            .get("playerConfig")
+            .and_then(|pc| pc.get("audioConfig"))
+            .and_then(|ac| ac.get("loudnessDb"))
+            .and_then(|v| v.as_f64())
+            .map(|v| v as f32);
+
+        let duration_secs = json
+            .get("videoDetails")
+            .and_then(|vd| vd.get("lengthSeconds"))
+            .and_then(|s| s.as_str())
+            .and_then(|s| s.parse::<f64>().ok());
+
+        if let Some(formats) = json
+            .get("streamingData")
+            .and_then(|sd| sd.get("adaptiveFormats"))
+            .and_then(|af| af.as_array())
+        {
+            let mut best: Option<(String, u32, Option<u64>)> = None;
+            for f in formats {
+                let mime = f.get("mimeType").and_then(|m| m.as_str()).unwrap_or("");
+                if !mime.starts_with("audio/mp4") {
+                    continue;
+                }
+                let Some(url) = f.get("url").and_then(|u| u.as_str()) else {
+                    continue;
+                };
+                let br = f.get("bitrate").and_then(|b| b.as_u64()).unwrap_or(128_000) as u32;
+                let cl = f
+                    .get("contentLength")
+                    .and_then(|c| c.as_str())
+                    .and_then(|c| c.parse::<u64>().ok());
+                if best.as_ref().map(|b| br > b.1).unwrap_or(true) {
+                    best = Some((url.to_string(), br, cl));
+                }
+            }
+            if let Some((url, bitrate, content_length)) = best {
+                return Ok(ResolvedStream {
+                    track_id: video_id.to_string(),
+                    kind: StreamKind::Direct {
+                        url,
+                        content_length,
+                    },
+                    mime: "audio/mp4".to_string(),
+                    bitrate,
+                    duration_secs,
+                    loudness_db,
+                    user_agent: Some(VR_UA.to_string()),
+                    source: StreamSource::RustyPipe,
+                    resolved_at: Instant::now(),
+                });
+            }
+        }
+
+        Err(anyhow!("ANDROID_VR adaptive audio not found"))
     }
 
     /// Ultra-fast yt-dlp HLS resolution (~2s instead of ~6s) by skipping webpage & JS challenge solver!
     async fn resolve_via_ytdlp_fast(&self, video_id: &str) -> Result<ResolvedStream> {
         let ytdlp_bin = find_ytdlp_bin();
         let watch_url = format!("https://music.youtube.com/watch?v={video_id}");
+        let tmp_ck = self.write_temp_netscape_cookies("fast").await;
         let mut cmd = Command::new(&ytdlp_bin);
         #[cfg(windows)]
         cmd.creation_flags(0x0800_0000);
 
+        cmd.args([
+            "-f",
+            "234/233",
+            "--extractor-args",
+            "youtube:player_skip=webpage,configs;player_client=visionos,android_vr,ios",
+            "--get-url",
+            "--no-playlist",
+            "--no-warnings",
+        ]);
+        if let Some(ref ck_path) = tmp_ck {
+            if let Some(s) = ck_path.to_str() {
+                cmd.args(["--cookies", s]);
+            }
+        }
         let output = cmd
-            .args([
-                "-f",
-                "234/233",
-                "--extractor-args",
-                "youtube:player_skip=webpage,configs;player_client=visionos",
-                "--get-url",
-                "--no-playlist",
-                "--no-warnings",
-                "--",
-                &watch_url,
-            ])
+            .args(["--", &watch_url])
             .output()
             .await
             .context("yt-dlp çalıştırılamadı")?;
+
+        if let Some(ck_path) = tmp_ck {
+            let _ = std::fs::remove_file(ck_path);
+        }
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -729,6 +1044,31 @@ impl YtmClient {
         Ok(resp.text().await?)
     }
 
+    async fn write_temp_netscape_cookies(&self, tag: &str) -> Option<PathBuf> {
+        let raw = self.get_raw_cookie().await?;
+        if raw.trim().is_empty() {
+            return None;
+        }
+        let path = std::env::temp_dir().join(format!(
+            "ytm_auth_{}_{}.txt",
+            tag,
+            std::process::id()
+        ));
+        let mut lines = vec!["# Netscape HTTP Cookie File".to_string()];
+        for pair in raw.split(';') {
+            let pair = pair.trim();
+            if let Some((k, v)) = pair.split_once('=') {
+                let k = k.trim();
+                let v = v.trim();
+                if !k.is_empty() {
+                    lines.push(format!(".youtube.com\tTRUE\t/\tTRUE\t2147483647\t{k}\t{v}"));
+                }
+            }
+        }
+        std::fs::write(&path, lines.join("\n")).ok()?;
+        Some(path)
+    }
+
     async fn resolve_via_ytdlp_default(
         &self,
         video_id: &str,
@@ -736,23 +1076,34 @@ impl YtmClient {
     ) -> Result<ResolvedStream> {
         let ytdlp_bin = find_ytdlp_bin();
         let watch_url = format!("https://music.youtube.com/watch?v={video_id}");
+        let tmp_ck = self.write_temp_netscape_cookies("def").await;
         let mut cmd = Command::new(&ytdlp_bin);
         #[cfg(windows)]
         cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
 
+        cmd.args([
+            "-f",
+            "234/233/bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio",
+            "--extractor-args",
+            "youtube:player_client=visionos,android_vr,ios,tv",
+            "--dump-json",
+            "--no-playlist",
+            "--no-warnings",
+        ]);
+        if let Some(ref ck_path) = tmp_ck {
+            if let Some(s) = ck_path.to_str() {
+                cmd.args(["--cookies", s]);
+            }
+        }
         let output = cmd
-            .args([
-                "-f",
-                "234/233/bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio",
-                "--dump-json",
-                "--no-playlist",
-                "--no-warnings",
-                "--",
-                &watch_url,
-            ])
+            .args(["--", &watch_url])
             .output()
             .await
             .context("yt-dlp çalıştırılamadı (sistemde kurulu olmayabilir)")?;
+
+        if let Some(ck_path) = tmp_ck {
+            let _ = std::fs::remove_file(ck_path);
+        }
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -898,11 +1249,15 @@ fn track_from_item(item: TrackItem) -> Track {
             .join(", ")
     };
 
-    // Pick a small thumbnail (~180px) to keep RAM usage minimal.
+    let artist_id = item
+        .artist_id
+        .or_else(|| item.artists.iter().find_map(|a| a.id.clone()));
+
+    // Pick a crisp thumbnail (~320px) while keeping RAM usage minimal.
     let thumbnail_url = item
         .cover
         .iter()
-        .min_by_key(|t| t.width.abs_diff(180))
+        .min_by_key(|t| t.width.abs_diff(320))
         .or_else(|| item.cover.first())
         .map(|t| t.url.clone());
 
@@ -910,8 +1265,58 @@ fn track_from_item(item: TrackItem) -> Track {
         id: item.id,
         title: item.name,
         artist,
+        artist_id,
         album: item.album.map(|a| a.name),
         duration_secs: item.duration,
         thumbnail_url,
     }
+}
+
+fn artist_from_item(item: ArtistItem) -> ArtistSummary {
+    let avatar_url = item
+        .avatar
+        .iter()
+        .min_by_key(|t| t.width.abs_diff(320))
+        .or_else(|| item.avatar.first())
+        .map(|t| t.url.clone());
+
+    ArtistSummary {
+        id: item.id,
+        name: item.name,
+        avatar_url,
+        subscriber_count: item.subscriber_count,
+    }
+}
+
+fn parse_netscape_to_cookie_header(txt: &str) -> String {
+    let mut pairs = Vec::new();
+    for line in txt.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let cols: Vec<&str> = line.split('\t').collect();
+        if cols.len() >= 7 && cols[0].contains("youtube.com") {
+            pairs.push(format!("{}={}", cols[5], cols[6]));
+        }
+    }
+    pairs.join("; ")
+}
+
+fn compute_sapisidhash(cookie: &str, origin: &str) -> Option<String> {
+    let sapisid = cookie.split(';').find_map(|c| {
+        let c = c.trim();
+        c.strip_prefix("SAPISID=")
+            .or_else(|| c.strip_prefix("__Secure-3PAPISID="))
+            .or_else(|| c.strip_prefix("__Secure-1PAPISID="))
+    })?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs();
+    let mut hasher = Sha1::new();
+    hasher.update(format!("{now} {sapisid} {origin}").as_bytes());
+    let digest = hasher.finalize();
+    let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+    Some(format!("SAPISIDHASH {now}_{hex}"))
 }

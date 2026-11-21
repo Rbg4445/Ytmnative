@@ -14,7 +14,7 @@ use crate::integrations::{
     spawn_obs_api_server, DiscordRpcClient, LyricLineDto,
 };
 use crate::media::{MediaAction, SystemMedia};
-use crate::model::Track;
+use crate::model::{ArtistDetailDto, ArtistSummary, SearchBundleDto, Track};
 use crate::queue::{PlayQueue, RepeatMode};
 use crate::storage::LibraryData;
 use crate::updater::{self, UpdateInfo};
@@ -80,7 +80,7 @@ impl AppController {
         hwnd: Option<*mut std::ffi::c_void>,
     ) -> anyhow::Result<(Arc<Self>, mpsc::Receiver<MediaAction>)> {
         let library = LibraryData::load();
-        let ytm = YtmClient::new()?;
+        let ytm = YtmClient::new(library.auth_cookie.clone())?;
         let audio = AudioEngine::new()?;
         audio.set_volume(library.volume.clamp(0.0, 1.0));
 
@@ -559,6 +559,41 @@ pub async fn search_songs(
 }
 
 #[tauri::command]
+pub async fn search_all(
+    ctrl: State<'_, Arc<AppController>>,
+    query: String,
+) -> Result<SearchBundleDto, String> {
+    let effective_query = extract_video_id_from_url(&query).unwrap_or(query);
+    ctrl.ytm
+        .search_all(&effective_query)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_artist(
+    ctrl: State<'_, Arc<AppController>>,
+    artist_id: String,
+    artist_name: Option<String>,
+) -> Result<ArtistDetailDto, String> {
+    ctrl.ytm
+        .fetch_artist(&artist_id, artist_name.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn toggle_follow_artist(
+    ctrl: State<'_, Arc<AppController>>,
+    artist: ArtistSummary,
+) -> bool {
+    ctrl.library
+        .lock()
+        .map(|mut l| l.toggle_follow_artist(&artist))
+        .unwrap_or(false)
+}
+
+#[tauri::command]
 pub async fn search_suggestions(
     ctrl: State<'_, Arc<AppController>>,
     query: String,
@@ -865,10 +900,15 @@ pub async fn connect_yt_browser(
     ctrl: State<'_, Arc<AppController>>,
     browser: String,
 ) -> Result<(), String> {
-    ctrl.ytm
+    let cookie = ctrl
+        .ytm
         .connect_from_browser(&browser)
         .await
         .map_err(|e| e.to_string())?;
+    if let Ok(mut lib) = ctrl.library.lock() {
+        lib.auth_cookie = Some(cookie);
+        lib.save();
+    }
     if let Ok(liked) = ctrl.ytm.fetch_yt_liked().await {
         if let Ok(mut lib) = ctrl.library.lock() {
             for t in liked.into_iter().rev() {
@@ -887,10 +927,15 @@ pub async fn connect_yt_cookies(
     ctrl: State<'_, Arc<AppController>>,
     raw: String,
 ) -> Result<(), String> {
-    ctrl.ytm
+    let cookie = ctrl
+        .ytm
         .connect_with_cookies(&raw)
         .await
         .map_err(|e| e.to_string())?;
+    if let Ok(mut lib) = ctrl.library.lock() {
+        lib.auth_cookie = Some(cookie);
+        lib.save();
+    }
     if let Ok(liked) = ctrl.ytm.fetch_yt_liked().await {
         if let Ok(mut lib) = ctrl.library.lock() {
             for t in liked.into_iter().rev() {
@@ -962,10 +1007,16 @@ pub async fn open_google_login(
 
                     let _ = login_win.destroy();
 
-                    ctrl.ytm
+                    let saved_cookie = ctrl
+                        .ytm
                         .connect_with_cookies(&cookie_header)
                         .await
                         .map_err(|e| format!("YouTube oturumu doğrulanamadı: {e}"))?;
+
+                    if let Ok(mut lib) = ctrl.library.lock() {
+                        lib.auth_cookie = Some(saved_cookie);
+                        lib.save();
+                    }
 
                     if let Ok(liked) = ctrl.ytm.fetch_yt_liked().await {
                         if let Ok(mut lib) = ctrl.library.lock() {
@@ -986,6 +1037,10 @@ pub async fn open_google_login(
 
 #[tauri::command]
 pub async fn disconnect_yt(ctrl: State<'_, Arc<AppController>>) -> Result<(), String> {
+    if let Ok(mut lib) = ctrl.library.lock() {
+        lib.auth_cookie = None;
+        lib.save();
+    }
     ctrl.ytm.disconnect_youtube().await.map_err(|e| e.to_string())
 }
 

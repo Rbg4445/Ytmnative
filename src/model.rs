@@ -8,9 +8,39 @@ pub struct Track {
     pub id: String,
     pub title: String,
     pub artist: String,
+    #[serde(default)]
+    pub artist_id: Option<String>,
     pub album: Option<String>,
     pub duration_secs: Option<u32>,
     pub thumbnail_url: Option<String>,
+}
+
+/// Artist summary card for search results, sidebar library, and artist pages.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArtistSummary {
+    pub id: String,
+    pub name: String,
+    pub avatar_url: Option<String>,
+    pub subscriber_count: Option<u64>,
+}
+
+/// Full artist profile page payload returned when clicking an artist.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArtistDetailDto {
+    pub id: String,
+    pub name: String,
+    pub avatar_url: Option<String>,
+    pub description: Option<String>,
+    pub subscriber_count: Option<u64>,
+    pub tracks: Vec<Track>,
+    pub similar_artists: Vec<ArtistSummary>,
+}
+
+/// Combined search results containing both matching artists and tracks.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchBundleDto {
+    pub artists: Vec<ArtistSummary>,
+    pub tracks: Vec<Track>,
 }
 
 /// User-created playlist persisted in local storage.

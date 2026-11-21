@@ -1,6 +1,6 @@
 [package]
 name = "ytm-native"
-version = "2.0.0"
+version = "3.0.0"
 edition = "2021"
 authors = ["Rbg4445 <https://github.com/Rbg4445>"]
 license = "MIT"
@@ -33,6 +33,7 @@ souvlaki = "0.8"
 
 # Utilities
 anyhow = "1"
+sha1 = "0.10"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
