@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr" class="dark">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YouTube Music — Native</title>
+  <title>YTM Native</title>
   <link rel="stylesheet" href="tailwind.css" />
   <style id="user-custom-css"></style>
 </head>
@@ -15,8 +15,7 @@
     <div class="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
     <div id="splash-status" class="fixed bottom-8 left-8 text-xs text-white/60 tracking-wide"></div>
     <button id="btn-skip-intro" onclick="hideSplash()" class="fixed bottom-7 right-7 flex items-center gap-2 px-5 py-2.5 rounded-full bg-black/55 hover:bg-[#FF0033] backdrop-blur-xl border border-white/25 hover:border-[#FF0033] text-sm font-semibold text-white shadow-2xl transition cursor-pointer">
-      <span>Atla</span>
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+      <span data-i18n="skip">Skip →</span>
     </button>
   </div>
 
@@ -29,8 +28,8 @@
           <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"></path>
         </svg>
       </div>
-      <div id="auto-update-title" class="text-base font-bold text-white mb-1">Yeni Güncelleme İndiriliyor</div>
-      <div id="auto-update-sub" class="text-xs text-neutral-400">Uygulama otomatik olarak güncellenip yeniden başlatılacak...</div>
+      <div id="auto-update-title" data-i18n="updatingTitle" class="text-base font-bold text-white mb-1">Downloading update...</div>
+      <div id="auto-update-sub" data-i18n="updatingSub" class="text-xs text-neutral-400">The new version will install and restart automatically.</div>
     </div>
   </div>
 
@@ -40,7 +39,7 @@
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
       <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"></path>
     </svg>
-    <span id="update-check-toast-text">Güncelleme kontrol ediliyor...</span>
+    <span id="update-check-toast-text" data-i18n="checkingUpdate">Checking for updates...</span>
   </div>
 
   <!-- DYNAMIC AMBIENT GLASS BACKDROP (shifts color smoothly with active album cover!) -->
@@ -85,15 +84,15 @@
       <nav class="space-y-1">
         <button data-nav="home" onclick="navigate('home')" class="nav-item w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-[14.5px] font-medium transition cursor-pointer">
           <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3.2 4 9.6V20h5.5v-6h5v6H20V9.6l-8-6.4Z"/></svg>
-          <span class="sidebar-label truncate">Ana Sayfa</span>
+          <span data-i18n="navHome" class="sidebar-label truncate">Home</span>
         </button>
         <button data-nav="explore" onclick="navigate('explore')" class="nav-item w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-[14.5px] font-medium transition cursor-pointer">
           <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polygon points="10,10 16,8 14,14 8,16" fill="currentColor"/></svg>
-          <span class="sidebar-label truncate">Keşfet</span>
+          <span data-i18n="navExplore" class="sidebar-label truncate">Explore</span>
         </button>
         <button data-nav="library" onclick="navigate('library')" class="nav-item w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-[14.5px] font-medium transition cursor-pointer">
           <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1Z"/></svg>
-          <span class="sidebar-label truncate">Kitaplık</span>
+          <span data-i18n="navLibrary" class="sidebar-label truncate">Library</span>
         </button>
       </nav>
 
@@ -101,19 +100,19 @@
       <div class="sidebar-label flex flex-col flex-1 min-h-0 mt-5 pt-4 border-t border-white/10">
         <button id="btn-new-playlist" onclick="toggleNewPlaylistBox()" class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-full bg-white/[0.10] hover:bg-white/[0.18] text-[13.5px] font-medium text-white transition cursor-pointer">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
-          <span>Yeni oynatma listesi</span>
+          <span data-i18n="newPlaylist">New playlist</span>
         </button>
 
         <div id="new-playlist-box" class="hidden mt-2 flex gap-1.5">
-          <input id="new-playlist-input" type="text" placeholder="Liste adı..." class="flex-1 min-w-0 bg-[#1a1a1a] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white/40" />
-          <button onclick="createPlaylist()" class="px-2.5 py-1.5 rounded-lg bg-[#FF0033] hover:bg-[#e0002d] text-xs font-medium text-white cursor-pointer">Ekle</button>
+          <input id="new-playlist-input" type="text" data-i18n-placeholder="playlistPlaceholder" placeholder="Playlist name..." class="flex-1 min-w-0 bg-[#1a1a1a] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white/40" />
+          <button onclick="createPlaylist()" data-i18n="add" class="px-2.5 py-1.5 rounded-lg bg-[#FF0033] hover:bg-[#e0002d] text-xs font-medium text-white cursor-pointer">Add</button>
         </div>
 
         <div id="sidebar-playlists" class="flex-1 overflow-y-auto mt-4 space-y-1 pr-1"></div>
 
         <!-- Subtle Updater Link -->
         <button id="btn-updater-pill" onclick="navigate('updates')" class="mt-2 pt-2 border-t border-white/10 text-left px-2 py-1 text-[11.5px] text-neutral-400 hover:text-white transition cursor-pointer truncate">
-          v1.0.0 • Güncelleme
+          v1.0.0 • Updates
         </button>
       </div>
     </aside>
@@ -129,22 +128,22 @@
             <svg class="w-4 h-4 text-neutral-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" />
             </svg>
-            <input id="search-input" type="text" autocomplete="off" placeholder="Şarkı, albüm, sanatçı veya podcast arayın" class="w-full bg-transparent text-[14px] text-white placeholder-neutral-400 focus:outline-none" />
+            <input id="search-input" type="text" autocomplete="off" data-i18n-placeholder="searchPlaceholder" placeholder="Search songs, albums, artists, or podcasts" class="w-full bg-transparent text-[14px] text-white placeholder-neutral-400 focus:outline-none" />
           </div>
           <div id="search-suggestions" class="hidden absolute left-0 right-0 top-12 rounded-xl bg-[#121216]/95 backdrop-blur-2xl border border-white/15 shadow-[0_18px_50px_rgba(0,0,0,0.8)] py-1.5 overflow-hidden z-50"></div>
         </div>
 
         <!-- Right Header Controls: Refresh + Queue Toggle + Account Avatar -->
         <div class="flex items-center gap-2.5">
-          <button id="btn-header-refresh" onclick="refreshHome(true)" title="Yeni öneriler getir (F5)" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] backdrop-blur-md border border-white/[0.10] text-xs font-medium text-neutral-200 transition cursor-pointer">
+          <button id="btn-header-refresh" onclick="refreshHome(true)" title="Refresh recommendations (F5)" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] backdrop-blur-md border border-white/[0.10] text-xs font-medium text-neutral-200 transition cursor-pointer">
             <svg id="icon-header-refresh" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-2.64-6.36L21 8m0-5v5h-5"/></svg>
-            <span>Yenile</span>
+            <span data-i18n="refresh">Refresh</span>
           </button>
           <button id="btn-toggle-queue" onclick="toggleQueue()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] backdrop-blur-md border border-white/[0.10] text-xs font-medium text-neutral-200 transition cursor-pointer">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h10M4 18h10M18 12v6l4-3-4-3Z"/></svg>
-            <span>Sıra / Sözler</span>
+            <span data-i18n="queueLyrics">Queue / Lyrics</span>
           </button>
-          <button id="btn-account-avatar" onclick="navigate('account')" title="YouTube Hesabı Bağla" class="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/20 hover:ring-2 hover:ring-white/40 flex items-center justify-center text-xs font-bold text-white transition cursor-pointer">
+          <button id="btn-account-avatar" onclick="navigate('account')" title="Account & Settings" class="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/20 hover:ring-2 hover:ring-white/40 flex items-center justify-center text-xs font-bold text-white transition cursor-pointer">
           </button>
         </div>
       </header>
@@ -156,12 +155,12 @@
       <main id="main-content" class="flex-1 overflow-y-auto px-8 pt-6 pb-8"></main>
     </div>
 
-    <!-- COLLAPSIBLE RIGHT DRAWER (Frosted Translucent Glass: Sıradakiler | Sözler) -->
+    <!-- COLLAPSIBLE RIGHT DRAWER (Frosted Translucent Glass: Up Next | Lyrics) -->
     <aside id="queue-drawer" class="hidden w-[320px] shrink-0 bg-black/60 backdrop-blur-2xl border-l border-white/[0.08] flex-col px-4 py-4">
       <div class="flex items-center justify-between mb-3 border-b border-white/10 pb-2.5">
         <div class="flex items-center gap-4">
-          <button id="tab-drawer-queue" onclick="switchDrawerTab('queue')" class="text-xs font-bold tracking-wider uppercase text-white border-b-2 border-[#FF0033] pb-1 cursor-pointer">Sıradakiler</button>
-          <button id="tab-drawer-lyrics" onclick="switchDrawerTab('lyrics')" class="text-xs font-bold tracking-wider uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer">Sözler</button>
+          <button id="tab-drawer-queue" data-i18n="upNext" onclick="switchDrawerTab('queue')" class="text-xs font-bold tracking-wider uppercase text-white border-b-2 border-[#FF0033] pb-1 cursor-pointer">Up Next</button>
+          <button id="tab-drawer-lyrics" data-i18n="lyrics" onclick="switchDrawerTab('lyrics')" class="text-xs font-bold tracking-wider uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer">Lyrics</button>
         </div>
         <button onclick="toggleQueue()" class="text-neutral-400 hover:text-white text-sm cursor-pointer">✕</button>
       </div>
@@ -218,13 +217,13 @@
         <div class="relative">
           <button id="btn-sleep" onclick="toggleSleepMenu()" title="Uyku Zamanlayıcısı" class="px-2 py-1 rounded hover:bg-white/10 text-xs text-neutral-400 hover:text-white transition cursor-pointer">🌙</button>
           <div id="sleep-menu" class="hidden absolute bottom-10 right-0 w-44 bg-[#181818] border border-white/15 rounded-lg shadow-xl py-1.5 z-50 text-xs">
-            <div class="px-3 py-1 text-[10.5px] uppercase tracking-wider text-neutral-400">Uyku Zamanlayıcı</div>
-            <button onclick="setSleep(null, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">Kapalı</button>
-            <button onclick="setSleep(null, true)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">Bu parça bitince</button>
-            <button onclick="setSleep(15, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">15 dakika</button>
-            <button onclick="setSleep(30, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">30 dakika</button>
-            <button onclick="setSleep(45, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">45 dakika</button>
-            <button onclick="setSleep(60, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">60 dakika</button>
+            <div data-i18n="sleepTimer" class="px-3 py-1 text-[10.5px] uppercase tracking-wider text-neutral-400">Sleep Timer</div>
+            <button data-i18n="sleepOff" onclick="setSleep(null, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">Off</button>
+            <button data-i18n="sleepAfterTrack" onclick="setSleep(null, true)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">After this track</button>
+            <button data-i18n="min15" onclick="setSleep(15, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">15 minutes</button>
+            <button data-i18n="min30" onclick="setSleep(30, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">30 minutes</button>
+            <button data-i18n="min45" onclick="setSleep(45, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">45 minutes</button>
+            <button data-i18n="min60" onclick="setSleep(60, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">60 minutes</button>
           </div>
         </div>
 
@@ -248,6 +247,7 @@
     </div>
   </footer>
 
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

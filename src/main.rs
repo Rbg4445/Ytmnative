@@ -48,6 +48,7 @@ fn main() {
             backend::get_lyrics,
             backend::save_custom_css,
             backend::mark_intro_seen,
+            backend::set_language,
             backend::seek,
             backend::set_volume,
             backend::toggle_like,

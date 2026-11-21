@@ -629,6 +629,14 @@ pub fn mark_intro_seen(ctrl: State<'_, Arc<AppController>>) {
 }
 
 #[tauri::command]
+pub fn set_language(ctrl: State<'_, Arc<AppController>>, language: String) {
+    if let Ok(mut lib) = ctrl.library.lock() {
+        lib.language = language.trim().to_string();
+        lib.save();
+    }
+}
+
+#[tauri::command]
 pub fn seek(ctrl: State<'_, Arc<AppController>>, seconds: f64) {
     ctrl.audio.seek(seconds);
 }

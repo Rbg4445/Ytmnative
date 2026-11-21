@@ -187,11 +187,11 @@ function renderNav() {
   // Updater pill
   const upd = document.getElementById("btn-updater-pill");
   if (state.updateStatus.kind === "available") {
-    upd.textContent = `⬆ ${state.updateStatus.info.version} Güncelleme Hazır`;
+    upd.textContent = `⬆ ${state.updateStatus.info.version} ${t("updateReady")}`;
     upd.className =
       "mt-2 pt-2 border-t border-white/10 text-left px-2 py-1 text-[11.5px] font-medium text-[#FF0033] hover:text-white transition cursor-pointer truncate";
   } else {
-    upd.textContent = `v${state.updateStatus.version} • Güncelleme`;
+    upd.textContent = `v${state.updateStatus.version} • ${t("updates")}`;
     upd.className =
       "mt-2 pt-2 border-t border-white/10 text-left px-2 py-1 text-[11.5px] text-neutral-400 hover:text-white transition cursor-pointer truncate";
   }
@@ -203,8 +203,8 @@ function renderNav() {
     <button onclick="navigate('liked')" class="w-full text-left px-2.5 py-2 rounded-lg transition cursor-pointer ${
       likedActive ? "bg-[#212121]" : "hover:bg-white/[0.08]"
     }">
-      <div class="text-[13.5px] font-medium text-white truncate">Beğendiğim müzikler</div>
-      <div class="text-[11.5px] text-neutral-400 truncate mt-0.5">📌 Otomatik oynatma listesi • ${
+      <div class="text-[13.5px] font-medium text-white truncate">${esc(t("likedMusic"))}</div>
+      <div class="text-[11.5px] text-neutral-400 truncate mt-0.5">📌 ${esc(t("autoPlaylist"))} • ${
         state.library.liked_tracks.length
       }</div>
     </button>
@@ -216,7 +216,7 @@ function renderNav() {
         active ? "bg-[#212121]" : "hover:bg-white/[0.08]"
       }">
         <div class="text-[13.5px] font-medium text-white truncate">${esc(pl.name)}</div>
-        <div class="text-[11.5px] text-neutral-400 truncate mt-0.5">Oynatma listesi • ${pl.tracks.length}</div>
+        <div class="text-[11.5px] text-neutral-400 truncate mt-0.5">${esc(t("playlist"))} • ${pl.tracks.length}</div>
       </button>
     `;
   }
@@ -339,18 +339,18 @@ function renderMain() {
     const recent =
       state.ytHistory.length > 0 ? state.ytHistory : state.library.recently_played;
     const recentEyebrow =
-      state.ytHistory.length > 0 ? "YOUTUBE GEÇMİŞİN" : "SON DİNLEDİKLERİN";
+      state.ytHistory.length > 0 ? t("ytHistoryEyebrow") : t("recentEyebrow");
     const recTitle =
       state.ytHistory.length > 0
-        ? "YouTube geçmişine göre öneriler"
+        ? t("ytRecsTitle")
         : state.library.recently_played.length > 0
-        ? "Sana özel öneriler"
-        : "Hızlı seçimler";
+        ? t("personalRecsTitle")
+        : t("quickPicksTitle");
 
     main.innerHTML = `
       <!-- MOOD CHIPS ROW -->
       <div class="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1 mb-8">
-        ${MOODS.map(([label, query]) => {
+        ${getMoods().map(([label, query]) => {
           const active = state.activeMood === label;
           return `
             <button onclick="selectMood('${esc(label)}', '${esc(query)}')" class="shrink-0 px-3.5 py-1.5 rounded-lg text-[13.5px] font-medium border transition cursor-pointer ${
@@ -368,12 +368,12 @@ function renderMain() {
         <section class="mb-10">
           <div class="flex items-end justify-between mb-4">
             <div>
-              <div class="text-xs uppercase tracking-wider text-neutral-400 mb-1">RUH HALİ</div>
+              <div class="text-xs uppercase tracking-wider text-neutral-400 mb-1">${esc(t("moodEyebrow"))}</div>
               <h2 class="text-[28px] font-bold leading-tight">${esc(state.activeMood)} ${
-                state.loadingMood ? '<span class="text-sm font-normal text-[#FF0033] ml-2">yükleniyor...</span>' : ""
+                state.loadingMood ? `<span class="text-sm font-normal text-[#FF0033] ml-2">${esc(t("loading"))}</span>` : ""
               }</h2>
             </div>
-            <button onclick="clearMood()" class="px-3.5 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-medium text-white cursor-pointer">Filtreyi temizle</button>
+            <button onclick="clearMood()" class="px-3.5 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-medium text-white cursor-pointer">${esc(t("clearFilter"))}</button>
           </div>
           ${renderCardCarousel("carousel-mood", state.moodTracks)}
         </section>`
@@ -386,8 +386,8 @@ function renderMain() {
         <section class="mb-11">
           <div class="flex items-end justify-between mb-4">
             <div>
-              <div class="text-xs uppercase tracking-wider text-neutral-400 mb-1">${recentEyebrow}</div>
-              <h2 class="text-[28px] font-bold leading-tight">Yeniden dinleyin</h2>
+              <div class="text-xs uppercase tracking-wider text-neutral-400 mb-1">${esc(recentEyebrow)}</div>
+              <h2 class="text-[28px] font-bold leading-tight">${esc(t("listenAgain"))}</h2>
             </div>
             <div class="flex items-center gap-2">
               <button onclick="scrollCarousel('carousel-recent', -420)" class="w-9 h-9 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-lg text-white cursor-pointer">‹</button>
@@ -403,14 +403,14 @@ function renderMain() {
         <div class="flex items-end justify-between mb-4">
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-400 mb-1">${
-              state.loadingHome ? "YÜKLENİYOR..." : "SENİN İÇİN SEÇTİKLERİMİZ"
+              state.loadingHome ? esc(t("loadingUpper")) : esc(t("pickedEyebrow"))
             }</div>
-            <h2 class="text-[28px] font-bold leading-tight">${recTitle}</h2>
+            <h2 class="text-[28px] font-bold leading-tight">${esc(recTitle)}</h2>
           </div>
           <div class="flex items-center gap-2.5">
             <button onclick="refreshHome(true)" ${state.loadingHome ? "disabled" : ""} class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-medium text-white transition cursor-pointer disabled:opacity-60">
               <svg class="w-3.5 h-3.5 ${state.loadingHome ? "animate-spin text-[#FF0033]" : ""}" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-2.64-6.36L21 8m0-5v5h-5"/></svg>
-              <span>${state.loadingHome ? "Yenileniyor..." : "Yenile"}</span>
+              <span>${state.loadingHome ? esc(t("refreshing")) : esc(t("refresh"))}</span>
             </button>
             <button onclick="scrollCarousel('carousel-rec', -420)" class="w-9 h-9 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-lg text-white cursor-pointer">‹</button>
             <button onclick="scrollCarousel('carousel-rec', 420)" class="w-9 h-9 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-lg text-white cursor-pointer">›</button>
@@ -538,8 +538,8 @@ function renderMain() {
 
   if (state.page === "account") {
     main.innerHTML = `
-      <h1 class="text-[28px] font-bold mb-2">YouTube Music Hesabı</h1>
-      <p class="text-sm text-neutral-400 mb-6">Hesabını bağladığında "Yeniden dinleyin", beğendiklerin ve öneriler doğrudan YouTube geçmişinden çekilir.</p>
+      <h1 class="text-[28px] font-bold mb-2">${esc(t("accountTitle"))}</h1>
+      <p class="text-sm text-neutral-400 mb-6">${esc(t("accountSub"))}</p>
       <div class="max-w-2xl bg-[#141414] border border-white/10 rounded-xl p-6 space-y-5">
         ${
           state.ytConnected
@@ -547,18 +547,18 @@ function renderMain() {
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-[#FF0033]"></span>
-                <span class="font-semibold text-white">YouTube Music Hesabı Bağlı</span>
+                <span class="font-semibold text-white">${esc(t("accountConnected"))}</span>
               </div>
               <div class="flex gap-2">
-                <button onclick="refreshHome()" class="px-4 py-2 rounded-full bg-white text-black text-xs font-semibold cursor-pointer">Geçmişi Eşitle</button>
-                <button onclick="disconnectYt()" class="px-4 py-2 rounded-full border border-white/20 text-xs text-neutral-300 hover:text-white cursor-pointer">Bağlantıyı Kes</button>
+                <button onclick="refreshHome(true)" class="px-4 py-2 rounded-full bg-white text-black text-xs font-semibold cursor-pointer">${esc(t("syncHistory"))}</button>
+                <button onclick="disconnectYt()" class="px-4 py-2 rounded-full border border-white/20 text-xs text-neutral-300 hover:text-white cursor-pointer">${esc(t("disconnect"))}</button>
               </div>
             </div>`
             : `
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 class="text-base font-semibold text-white">Google Hesabınla Oturum Aç</h3>
-                <p class="text-xs text-neutral-400 mt-1">Resmi Google giriş penceresi açılır; giriş yaptığında YouTube geçmişin, beğendiklerin ve önerilerin otomatik eşitlenir.</p>
+                <h3 class="text-base font-semibold text-white">${esc(t("googleSignInTitle"))}</h3>
+                <p class="text-xs text-neutral-400 mt-1">${esc(t("googleSignInSub"))}</p>
               </div>
               <button ${state.authBusy ? "disabled" : ""} onclick="loginWithGoogle()" class="shrink-0 flex items-center justify-center gap-3 px-5 py-2.5 rounded-full bg-white hover:bg-neutral-100 disabled:opacity-50 text-[#1f1f1f] text-sm font-semibold shadow-lg transition cursor-pointer">
                 <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -567,7 +567,7 @@ function renderMain() {
                   <path fill="#FBBC05" d="M5.28 14.28A7.22 7.22 0 0 1 4.9 12c0-.79.14-1.56.38-2.28V6.61H1.29A12 12 0 0 0 0 12c0 1.94.46 3.77 1.29 5.39l3.99-3.11Z"/>
                   <path fill="#EA4335" d="M12 4.76c1.76 0 3.34.61 4.59 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.29 6.61l3.99 3.11c.95-2.85 3.6-4.96 6.72-4.96Z"/>
                 </svg>
-                <span>${state.authBusy ? "Giriş bekleniyor..." : "Google ile Oturum Aç"}</span>
+                <span>${state.authBusy ? esc(t("waitingLogin")) : esc(t("googleSignInBtn"))}</span>
               </button>
             </div>`
         }
@@ -575,20 +575,34 @@ function renderMain() {
         ${state.authErr ? `<div class="text-xs text-[#FF0033]">⚠ ${esc(state.authErr)}</div>` : ""}
       </div>
 
-      <h2 class="text-xl font-bold mt-8 mb-2">Uygulama Ayarları</h2>
-      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold mt-8 mb-3">${esc(t("appSettings"))}</h2>
+
+      <!-- LANGUAGE SELECTOR -->
+      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 flex items-center justify-between gap-4 mb-4">
         <div>
-          <div class="text-sm font-semibold text-white">Açılış İntro Videosu</div>
-          <div class="text-xs text-neutral-400 mt-0.5">Yalnızca ilk açılışta otomatik oynatılır; dilediğinde buradan tekrar izleyebilirsin.</div>
+          <div class="text-sm font-semibold text-white">🌐 ${esc(t("languageTitle"))}</div>
+          <div class="text-xs text-neutral-400 mt-0.5">${esc(t("languageSub"))}</div>
         </div>
-        <button onclick="showIntro(false)" class="shrink-0 px-4 py-2 rounded-full bg-white/10 hover:bg-[#FF0033] border border-white/15 hover:border-[#FF0033] text-xs font-semibold text-white transition cursor-pointer">🎬 İntroyu Göster</button>
+        <select id="language-select" onchange="changeLanguage(this.value)" class="shrink-0 bg-[#0a0a0e] border border-white/20 hover:border-white/40 rounded-lg px-3.5 py-2 text-xs font-medium text-white cursor-pointer focus:outline-none">
+          ${LANGUAGES.map(
+            (l) => `<option value="${l.code}" ${currentLang === l.code ? "selected" : ""}>${esc(l.label)}</option>`
+          ).join("")}
+        </select>
       </div>
 
-      <h2 class="text-xl font-bold mb-2">Özel CSS (Custom CSS)</h2>
-      <p class="text-xs text-neutral-400 mb-3">Arayüzü kendi stilinle özelleştir (ytmdesktop özelliği — anında uygulanır ve kaydedilir).</p>
+      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 flex items-center justify-between mb-6">
+        <div>
+          <div class="text-sm font-semibold text-white">${esc(t("introTitle"))}</div>
+          <div class="text-xs text-neutral-400 mt-0.5">${esc(t("introSub"))}</div>
+        </div>
+        <button onclick="showIntro(false)" class="shrink-0 px-4 py-2 rounded-full bg-white/10 hover:bg-[#FF0033] border border-white/15 hover:border-[#FF0033] text-xs font-semibold text-white transition cursor-pointer">${esc(t("showIntroBtn"))}</button>
+      </div>
+
+      <h2 class="text-xl font-bold mb-2">${esc(t("customCssTitle"))}</h2>
+      <p class="text-xs text-neutral-400 mb-3">${esc(t("customCssSub"))}</p>
       <div class="max-w-2xl bg-[#141414] border border-white/10 rounded-xl p-5 space-y-3">
-        <textarea id="custom-css-input" rows="4" placeholder="/* Örn: #player-bar { background: #141414 !important; } */" class="w-full font-mono bg-[#0a0a0a] border border-white/15 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-white/40">${esc(state.library.custom_css || "")}</textarea>
-        <button onclick="saveCustomCss()" class="px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold cursor-pointer">CSS'i Uygula ve Kaydet</button>
+        <textarea id="custom-css-input" rows="4" placeholder="/* e.g. #player-bar { background: #141414 !important; } */" class="w-full font-mono bg-[#0a0a0a] border border-white/15 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-white/40">${esc(state.library.custom_css || "")}</textarea>
+        <button onclick="saveCustomCss()" class="px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold cursor-pointer">${esc(t("saveCssBtn"))}</button>
       </div>
     `;
     return;
@@ -598,30 +612,30 @@ function renderMain() {
     const repo = state.library.update_repo || DEFAULT_UPDATE_REPO;
     const u = state.updateStatus;
     main.innerHTML = `
-      <h1 class="text-[28px] font-bold mb-2">Güncelleme Sistemi (VDS Gerektirmez)</h1>
-      <p class="text-sm text-neutral-400 mb-6">Mevcut sürüm: v${esc(u.version)} • Güncellemeler ücretsiz GitHub Releases üzerinden tek tıkla indirilir.</p>
+      <h1 class="text-[28px] font-bold mb-2">${esc(t("updatesTitle"))}</h1>
+      <p class="text-sm text-neutral-400 mb-6">${esc(t("updatesSub").replace("{v}", u.version))}</p>
       <div class="max-w-2xl bg-[#141414] border border-white/10 rounded-xl p-6 space-y-4">
         <div class="flex gap-2.5">
-          <input id="repo-input" type="text" value="${esc(repo)}" placeholder="kullanici/ytm-native" class="flex-1 bg-[#0a0a0a] border border-white/15 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
-          <button onclick="saveAndCheckUpdate()" class="px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold cursor-pointer">Kaydet ve Kontrol Et</button>
+          <input id="repo-input" type="text" value="${esc(repo)}" placeholder="owner/repo" class="flex-1 bg-[#0a0a0a] border border-white/15 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
+          <button onclick="saveAndCheckUpdate()" class="px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold cursor-pointer">${esc(t("saveCheckBtn"))}</button>
         </div>
         ${
           u.kind === "checking"
-            ? `<div class="text-xs text-neutral-300">⟳ GitHub Releases kontrol ediliyor...</div>`
+            ? `<div class="text-xs text-neutral-300">⟳ ${esc(t("checkingReleases"))}</div>`
             : u.kind === "uptodate"
-            ? `<div class="text-xs text-emerald-400">✓ Uygulama tamamen güncel!</div>`
+            ? `<div class="text-xs text-emerald-400">${esc(t("upToDate"))}</div>`
             : u.kind === "downloading"
-            ? `<div class="text-xs text-[#FF0033]">⬇ Yeni sürüm indiriliyor ve kuruluyor...</div>`
+            ? `<div class="text-xs text-[#FF0033]">${esc(t("downloadingUpdate"))}</div>`
             : u.kind === "error"
             ? `<div class="text-xs text-[#FF0033]">⚠ ${esc(u.message)}</div>`
             : u.kind === "available"
             ? `
               <div class="p-4 rounded-lg bg-[#211014] border border-[#FF0033]/40 space-y-2.5">
-                <div class="text-sm font-semibold text-white">🎉 Yeni sürüm hazır: ${esc(u.info.version)} (${esc(u.info.asset_name)})</div>
+                <div class="text-sm font-semibold text-white">${esc(t("newVersionReady"))} ${esc(u.info.version)} (${esc(u.info.asset_name)})</div>
                 ${u.info.release_notes ? `<pre class="text-xs text-neutral-300 whitespace-pre-wrap">${esc(u.info.release_notes)}</pre>` : ""}
-                <button onclick="installUpdate()" class="px-5 py-2 rounded-full bg-[#FF0033] hover:bg-[#e0002d] text-white text-xs font-semibold cursor-pointer">⬆ İndir, Güncelle ve Yeniden Başlat</button>
+                <button onclick="installUpdate()" class="px-5 py-2 rounded-full bg-[#FF0033] hover:bg-[#e0002d] text-white text-xs font-semibold cursor-pointer">${esc(t("installNowBtn"))}</button>
               </div>`
-            : `<p class="text-xs text-neutral-400">Yeni sürüm yayınlamak için repoya <code>v0.2.0</code> etiketi atman yeterli; GitHub Actions Windows exe'sini otomatik derleyip yayınlar.</p>`
+            : ""
         }
       </div>
     `;
@@ -1410,6 +1424,18 @@ async function runAutoUpdateOnStartup() {
   }
 }
 
+function changeLanguage(lang) {
+  if (!I18N[lang]) lang = "en";
+  currentLang = lang;
+  localStorage.setItem("ytm_lang", lang);
+  state.library.language = lang;
+  invoke("set_language", { language: lang }).catch(() => {});
+  applyStaticTranslations();
+  renderNav();
+  renderMain();
+  renderQueue();
+}
+
 // --- BOOT ---
 (async function init() {
   document.addEventListener("keydown", (e) => {
@@ -1420,6 +1446,11 @@ async function runAutoUpdateOnStartup() {
   });
 
   await refreshLibrary();
+  const savedLang = (state.library.language || "en").trim();
+  currentLang = I18N[savedLang] ? savedLang : "en";
+  localStorage.setItem("ytm_lang", currentLang);
+  applyStaticTranslations();
+
   await syncPlayback();
 
   // Only play intro automatically on the very first launch (and never if music is already playing)

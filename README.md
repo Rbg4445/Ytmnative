@@ -94,6 +94,14 @@ git push origin v1.0.0
 
 ---
 
+## 🤝 Contributors & Acknowledgments
+
+- **[@Rbg4445](https://github.com/Rbg4445)** — Creator & Maintainer
+- **Google Antigravity** — AI-assisted Rust audio architecture, Tauri v2 desktop engineering, glassmorphic UI, and CI/CD automation
+- **Claude (Anthropic)** — AI-assisted development and code assistance
+
+---
+
 ## ⚖️ Yasal Uyarı (Disclaimer) & Lisans
 
 - **YTM Native**, bağımsız ve resmi olmayan (unofficial) açık kaynaklı bir masaüstü istemcisidir.

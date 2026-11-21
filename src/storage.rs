@@ -31,10 +31,17 @@ pub struct LibraryData {
     /// Whether the startup intro video has already been shown once.
     #[serde(default)]
     pub intro_seen: bool,
+    /// UI language code (defaults to English "en").
+    #[serde(default = "default_language")]
+    pub language: String,
 }
 
 fn default_volume() -> f32 {
     0.85
+}
+
+fn default_language() -> String {
+    "en".to_string()
 }
 
 impl Default for LibraryData {
@@ -48,6 +55,7 @@ impl Default for LibraryData {
             last_track: None,
             custom_css: String::new(),
             intro_seen: false,
+            language: default_language(),
         }
     }
 }
