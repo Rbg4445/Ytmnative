@@ -103,7 +103,7 @@ let state = {
     stream_meta: null,
     last_error: null,
   },
-  updateStatus: { kind: "idle", version: "6.0.0", info: null, message: "" },
+  updateStatus: { kind: "idle", version: "7.0.0", info: null, message: "" },
   authMsg: "",
   authErr: "",
   authBusy: false,
