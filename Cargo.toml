@@ -1,6 +1,6 @@
 [package]
 name = "ytm-native"
-version = "1.0.0"
+version = "1.0.0-beta"
 edition = "2021"
 description = "Ultra-lightweight native YouTube Music desktop client written in Rust + Tailwind CSS"
 
@@ -39,5 +39,5 @@ raw-window-handle = "0.6"
 opt-level = 3
 lto = "thin"
 codegen-units = 1
-strip = true
+strip = false
 panic = "unwind"

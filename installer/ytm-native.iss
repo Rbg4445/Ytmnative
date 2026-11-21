@@ -1,6 +1,6 @@
 ; YTM Native — Windows Kurulum Sihirbazı (Inno Setup 6)
 #define MyAppName "YTM Native"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.0-beta"
 #define MyAppPublisher "Rbg4445"
 #define MyAppURL "https://github.com/Rbg4445/Ytmnative"
 #define MyAppExeName "ytm-native.exe"
@@ -23,8 +23,8 @@ OutputDir=..\dist
 OutputBaseFilename=YTM-Native-Setup-{#MyAppVersion}
 SetupIconFile=..\icons\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
-Compression=lzma2/ultra64
-SolidCompression=yes
+Compression=lzma
+SolidCompression=no
 WizardStyle=modern
 CloseApplications=force
 RestartApplications=no

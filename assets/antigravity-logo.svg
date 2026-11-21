@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Google Antigravity">
+  <defs>
+    <linearGradient id="agBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f1322"/>
+      <stop offset="100%" stop-color="#090b12"/>
+    </linearGradient>
+    <linearGradient id="agAccent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4285F4"/>
+      <stop offset="52%" stop-color="#A855F7"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="58" fill="url(#agBg)" stroke="url(#agAccent)" stroke-width="3"/>
+  <!-- Stylized Antigravity A + Levitation Spark -->
+  <path d="M60 24 L88 86 H74 L67 70 H53 L46 86 H32 L60 24 Z M57 58 H63 L60 49 L57 58 Z" fill="url(#agAccent)"/>
+  <circle cx="60" cy="95" r="3.5" fill="#60A5FA"/>
+</svg>

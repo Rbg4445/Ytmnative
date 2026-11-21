@@ -57,15 +57,17 @@ fn new_exe_path(exe: &std::path::Path) -> PathBuf {
     PathBuf::from(name)
 }
 
-/// Parse `"v1.2.3"` or `"1.2.3"` into `(1, 2, 3)`.
-pub fn parse_semver(s: &str) -> Option<(u32, u32, u32)> {
+/// Parse `"v1.0.0-beta"` -> `(1, 0, 0, 0)` and `"v1.0.0"` -> `(1, 0, 0, 1)`
+/// so a stable `"1.0.0"` is recognized as newer than `"1.0.0-beta"`.
+pub fn parse_semver(s: &str) -> Option<(u32, u32, u32, u8)> {
     let clean = s.trim().trim_start_matches(['v', 'V']);
+    let is_stable = if clean.contains('-') { 0u8 } else { 1u8 };
     let core = clean.split('-').next()?;
     let mut parts = core.split('.');
     let major = parts.next()?.parse::<u32>().ok()?;
     let minor = parts.next().unwrap_or("0").parse::<u32>().ok()?;
     let patch = parts.next().unwrap_or("0").parse::<u32>().ok()?;
-    Some((major, minor, patch))
+    Some((major, minor, patch, is_stable))
 }
 
 pub fn is_newer_version(remote: &str, local: &str) -> bool {
