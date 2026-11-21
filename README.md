@@ -11,6 +11,9 @@
     <img src="https://img.shields.io/badge/Rust-Saf%20Ses%20Motoru-DEA584?style=for-the-badge&logo=rust&logoColor=black" alt="Rust" />
     <img src="https://img.shields.io/badge/Arka%20Plan%20RAM-~12%20MB-10B981?style=for-the-badge" alt="~12 MB RAM" />
     <img src="https://img.shields.io/badge/Güncelleme-5sn%20Otomatik-6366F1?style=for-the-badge" alt="Auto Update" />
+    <a href="https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3">
+      <img src="https://img.shields.io/badge/VirusTotal-SHA--256%20Doğrula-394EFF?style=for-the-badge&logo=virustotal&logoColor=white" alt="VirusTotal" />
+    </a>
   </p>
 
   <p>
@@ -49,6 +52,21 @@
 <div align="center">
   <img src="assets/architecture-poster.svg" alt="Mimari Akış" width="100%" />
 </div>
+
+---
+
+## 🛡️ Güvenlik & VirusTotal Doğrulaması
+
+<div align="center">
+  <a href="https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3">
+    <img src="assets/security-poster.svg" alt="Güvenlik ve VirusTotal Taraması" width="100%" />
+  </a>
+</div>
+
+| Dosya | Windows Defender | SHA-256 | VirusTotal |
+| :--- | :--- | :--- | :--- |
+| `YTM-Native-Setup-1.0.0.exe` | ✅ 0 Tehdit | `d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3` | [VirusTotal Raporu](https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3) |
+| `ytm-native.exe` | ✅ 0 Tehdit | `35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8` | [VirusTotal Raporu](https://www.virustotal.com/gui/file/35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8) |
 
 ---
 
