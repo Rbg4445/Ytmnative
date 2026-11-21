@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 390" width="1200" height="390" role="img" aria-label="YTM Native Özellikler">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 390" width="1200" height="390" role="img" aria-label="YTM Native Features">
   <defs>
     <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#08080c"/>
@@ -8,18 +8,18 @@
 
   <rect width="1200" height="390" rx="20" fill="url(#bg3)" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="1.5"/>
 
-  <text x="44" y="46" fill="#FF4D6D" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" letter-spacing="1.4">ÖNE ÇIKAN ÖZELLİKLER</text>
-  <text x="44" y="76" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="24" font-weight="800">Masaüstünde En Hızlı ve Hafif YouTube Music Deneyimi</text>
+  <text x="44" y="46" fill="#FF4D6D" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" letter-spacing="1.4">KEY FEATURES</text>
+  <text x="44" y="76" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="24" font-weight="800">The Fastest, Lightest YouTube Music Desktop Experience</text>
 
   <!-- Card 1 -->
   <g transform="translate(44, 102)">
     <rect width="356" height="120" rx="16" fill="#FFFFFF" fill-opacity="0.045" stroke="#FFFFFF" stroke-opacity="0.11"/>
     <rect x="18" y="18" width="38" height="38" rx="10" fill="#FF0033" fill-opacity="0.18"/>
     <text x="29" y="43" fill="#FF4D6D" font-family="Segoe UI, sans-serif" font-size="18" font-weight="700">⚡</text>
-    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">Anlık ~350 ms Oynatma</text>
-    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">Saf Rust Innertube HLS + ön yükleme</text>
-    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Kartın üzerine gelince ses akışı arka planda</text>
-    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">hazırlanır, tıkladığın an müzik başlar.</text>
+    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">Instant ~350 ms Playback</text>
+    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">Pure-Rust Innertube HLS + prefetch</text>
+    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Hovering a track pre-resolves its stream in</text>
+    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">the background so playback starts instantly.</text>
   </g>
 
   <!-- Card 2 -->
@@ -27,10 +27,10 @@
     <rect width="356" height="120" rx="16" fill="#FFFFFF" fill-opacity="0.045" stroke="#FFFFFF" stroke-opacity="0.11"/>
     <rect x="18" y="18" width="38" height="38" rx="10" fill="#10B981" fill-opacity="0.18"/>
     <text x="28" y="43" fill="#34D399" font-family="Segoe UI, sans-serif" font-size="18" font-weight="700">🎧</text>
-    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">Yüksek Kalite Rust DSP</text>
+    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">High-Quality Rust DSP</text>
     <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">Symphonia AAC + CPAL WASAPI</text>
-    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">4-noktalı Cubic Catmull-Rom yeniden örnekleme</text>
-    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">ve otomatik ses yüksekliği normalizasyonu.</text>
+    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">4-point Cubic Catmull-Rom resampling and</text>
+    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">automatic loudness normalization built in.</text>
   </g>
 
   <!-- Card 3 -->
@@ -38,10 +38,10 @@
     <rect width="356" height="120" rx="16" fill="#FFFFFF" fill-opacity="0.045" stroke="#FFFFFF" stroke-opacity="0.11"/>
     <rect x="18" y="18" width="38" height="38" rx="10" fill="#6366F1" fill-opacity="0.20"/>
     <text x="28" y="43" fill="#818CF8" font-family="Segoe UI, sans-serif" font-size="18" font-weight="700">🔍</text>
-    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">Canlı Arama &amp; Yenile</text>
-    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">Anlık tamamlama + akıllı öneriler</text>
-    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Yazarken YouTube arama önerileri gelir; Yenile</text>
-    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">tuşu her seferinde taze karmalar sunar.</text>
+    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">Live Search &amp; Refresh</text>
+    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">Autocomplete + fresh recommendations</text>
+    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Real-time YouTube search suggestions and</text>
+    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">one-click Refresh for fresh radio mixes.</text>
   </g>
 
   <!-- Card 4 -->
@@ -49,21 +49,21 @@
     <rect width="356" height="120" rx="16" fill="#FFFFFF" fill-opacity="0.045" stroke="#FFFFFF" stroke-opacity="0.11"/>
     <rect x="18" y="18" width="38" height="38" rx="10" fill="#3B82F6" fill-opacity="0.20"/>
     <text x="29" y="43" fill="#60A5FA" font-family="Segoe UI, sans-serif" font-size="18" font-weight="700">🔐</text>
-    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">Doğrudan Google Girişi</text>
-    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">Firebase veya tarayıcı eklentisi yok</text>
-    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Uygulama içi güvenli pencereyle oturum aç,</text>
-    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">beğenilerin ve geçmişin anında eşlensin.</text>
+    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">Native Google Sign-In</text>
+    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">No Firebase or browser scraping</text>
+    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Sign in directly inside the app to sync your</text>
+    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">YouTube Music history, likes, and picks.</text>
   </g>
 
   <!-- Card 5 -->
   <g transform="translate(422, 240)">
     <rect width="356" height="120" rx="16" fill="#FFFFFF" fill-opacity="0.045" stroke="#FFFFFF" stroke-opacity="0.11"/>
     <rect x="18" y="18" width="38" height="38" rx="10" fill="#F59E0B" fill-opacity="0.20"/>
-    <text x="28" y="43" fill="#FBBF24" font-family="Segoe UI, sans-serif" font-size="18" font-weight="700">🌙</text>
-    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">Sözler, Uyku &amp; Tepsi</text>
-    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">Windows SMTC + Özel CSS + Kısayollar</text>
-    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Pencereyi kapattığında WebView bellekten silinir,</text>
-    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">müzik ve medya tuşları arka planda sürer.</text>
+    <text x="28" y="43" fill="#FBBF24" font-family="Segoe UI, sans-serif" font-size="18" font-weight="700">🌐</text>
+    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">10 Languages &amp; System Tray</text>
+    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">Lyrics, Sleep Timer, Custom CSS, SMTC</text>
+    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Closing the window frees WebView2 RAM</text>
+    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">while Rust audio &amp; media keys stay alive.</text>
   </g>
 
   <!-- Card 6 -->
@@ -71,9 +71,9 @@
     <rect width="356" height="120" rx="16" fill="#FFFFFF" fill-opacity="0.045" stroke="#FFFFFF" stroke-opacity="0.11"/>
     <rect x="18" y="18" width="38" height="38" rx="10" fill="#A855F7" fill-opacity="0.20"/>
     <text x="29" y="43" fill="#C084FC" font-family="Segoe UI, sans-serif" font-size="18" font-weight="700">🚀</text>
-    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">5 sn Otomatik Güncelleme</text>
-    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">VDS'siz GitHub Releases altyapısı</text>
-    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Her açılışta 5 saniye içinde yeni sürümü kontrol</text>
-    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">eder, varsa indirip kendini otomatik günceller.</text>
+    <text x="68" y="36" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">5s Auto-Update Engine</text>
+    <text x="68" y="55" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12.5">Serverless GitHub Releases updater</text>
+    <text x="18" y="88" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">Checks GitHub Releases within 5 seconds on</text>
+    <text x="18" y="105" fill="#D4D4D8" font-family="Segoe UI, sans-serif" font-size="12.5">launch and self-updates automatically.</text>
   </g>
 </svg>

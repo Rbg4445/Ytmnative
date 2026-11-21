@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" role="img" aria-label="YouTube Music Native v1.0.0 Hero Banner">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" role="img" aria-label="YTM Native v1.0.0 Hero Banner">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#07070b"/>
@@ -32,19 +32,17 @@
     </pattern>
   </defs>
 
-  <!-- Base Dark Canvas -->
   <rect width="1200" height="360" rx="22" fill="url(#bg)"/>
   <rect width="1200" height="360" rx="22" fill="url(#grid)"/>
   <rect width="1200" height="360" rx="22" fill="url(#glowRed)"/>
   <rect width="1200" height="360" rx="22" fill="url(#glowBlue)"/>
   <rect x="1" y="1" width="1198" height="358" rx="21" fill="none" stroke="url(#glassStroke)" stroke-width="1.5"/>
 
-  <!-- Left Original Trademark-Safe Emblem (Rounded Squircle + Soundwave Bars) -->
+  <!-- Left Original Emblem -->
   <g transform="translate(88, 92)">
     <rect x="0" y="0" width="152" height="152" rx="38" fill="#FF0033" fill-opacity="0.14"/>
     <rect x="14" y="14" width="124" height="124" rx="30" fill="url(#redGrad)"/>
     <rect x="15" y="15" width="122" height="122" rx="29" fill="none" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="1.5"/>
-    <!-- Stylized Soundwave + Pulse Bars -->
     <rect x="42" y="64" width="12" height="34" rx="6" fill="#FFFFFF" fill-opacity="0.9"/>
     <rect x="61" y="42" width="12" height="68" rx="6" fill="#FFFFFF"/>
     <rect x="80" y="52" width="12" height="58" rx="6" fill="#FFFFFF" fill-opacity="0.95"/>
@@ -53,31 +51,30 @@
 
   <!-- Main Title & Subtitle -->
   <g transform="translate(278, 102)">
-    <!-- Version Pill -->
     <rect x="0" y="0" width="194" height="28" rx="14" fill="#FF0033" fill-opacity="0.18" stroke="#FF0033" stroke-opacity="0.55" stroke-width="1"/>
     <circle cx="16" cy="14" r="4" fill="#FF2A55"/>
     <text x="28" y="19" fill="#FFD1DA" font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif" font-size="12.5" font-weight="700" letter-spacing="0.6">RELEASE v1.0.0 • RUST</text>
 
-    <text x="0" y="76" fill="#FFFFFF" font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif" font-size="48" font-weight="800" letter-spacing="-0.8">YouTube Music Native</text>
-    <text x="2" y="110" fill="#B8B8C4" font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif" font-size="18" font-weight="400">Ultra hafif, saf Rust ses motorlu, cam efektli masaüstü YouTube Music istemcisi</text>
+    <text x="0" y="76" fill="#FFFFFF" font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif" font-size="48" font-weight="800" letter-spacing="-0.8">YTM Native</text>
+    <text x="2" y="110" fill="#B8B8C4" font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif" font-size="18" font-weight="400">Ultra-lightweight pure-Rust YouTube Music desktop client with glassmorphic UI</text>
 
     <!-- Stat Badges Row -->
     <g transform="translate(0, 136)">
       <rect x="0" y="0" width="152" height="40" rx="11" fill="#FFFFFF" fill-opacity="0.06" stroke="#FFFFFF" stroke-opacity="0.12"/>
-      <text x="16" y="17" fill="#FF4D6D" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700">ARKA PLAN RAM</text>
+      <text x="16" y="17" fill="#FF4D6D" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700">BACKGROUND RAM</text>
       <text x="16" y="33" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">~12 MB Private</text>
 
       <rect x="166" y="0" width="152" height="40" rx="11" fill="#FFFFFF" fill-opacity="0.06" stroke="#FFFFFF" stroke-opacity="0.12"/>
-      <text x="182" y="17" fill="#34D399" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700">BAŞLATMA HIZI</text>
+      <text x="182" y="17" fill="#34D399" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700">PLAYBACK START</text>
       <text x="182" y="33" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">~350 ms HLS</text>
 
       <rect x="332" y="0" width="146" height="40" rx="11" fill="#FFFFFF" fill-opacity="0.06" stroke="#FFFFFF" stroke-opacity="0.12"/>
-      <text x="348" y="17" fill="#60A5FA" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700">BOŞTA CPU</text>
-      <text x="348" y="33" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">0% Kaynak</text>
+      <text x="348" y="17" fill="#60A5FA" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700">IDLE CPU</text>
+      <text x="348" y="33" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">0% Usage</text>
 
       <rect x="492" y="0" width="164" height="40" rx="11" fill="#FFFFFF" fill-opacity="0.06" stroke="#FFFFFF" stroke-opacity="0.12"/>
-      <text x="508" y="17" fill="#C084FC" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700">GÜNCELLEME</text>
-      <text x="508" y="33" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">5 sn Otomatik</text>
+      <text x="508" y="17" fill="#C084FC" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700">AUTO-UPDATE</text>
+      <text x="508" y="33" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">5s GitHub Sync</text>
     </g>
   </g>
 
@@ -85,7 +82,6 @@
   <g transform="translate(972, 76)">
     <rect x="0" y="0" width="166" height="208" rx="18" fill="#FFFFFF" fill-opacity="0.05" stroke="#FFFFFF" stroke-opacity="0.14"/>
     <text x="18" y="30" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="11" font-weight="700" letter-spacing="1">WASAPI HQ AUDIO</text>
-    <!-- Equalizer Bars -->
     <g transform="translate(22, 54)">
       <rect x="0"   y="54" width="10" height="58" rx="5" fill="url(#waveGrad)"/>
       <rect x="18"  y="26" width="10" height="86" rx="5" fill="url(#waveGrad)"/>

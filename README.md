@@ -1,109 +1,110 @@
 <div align="center">
-  <img src="assets/hero-banner.svg" alt="YouTube Music Native v1.0.0" width="100%" />
+  <img src="assets/hero-banner.svg" alt="YTM Native v1.0.0" width="100%" />
 
   <br/>
 
   <p>
     <a href="https://github.com/Rbg4445/Ytmnative/releases/latest">
-      <img src="https://img.shields.io/badge/İndir-YTM--Native--Setup--1.0.0.exe-FF0033?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Setup İndir" />
+      <img src="https://img.shields.io/badge/Download-YTM--Native--Setup--1.0.0.exe-FF0033?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows Setup" />
     </a>
-    <img src="https://img.shields.io/badge/Sürüm-v1.0.0-111116?style=for-the-badge&logo=github" alt="v1.0.0" />
-    <img src="https://img.shields.io/badge/Rust-Saf%20Ses%20Motoru-DEA584?style=for-the-badge&logo=rust&logoColor=black" alt="Rust" />
-    <img src="https://img.shields.io/badge/Arka%20Plan%20RAM-~12%20MB-10B981?style=for-the-badge" alt="~12 MB RAM" />
-    <img src="https://img.shields.io/badge/Güncelleme-5sn%20Otomatik-6366F1?style=for-the-badge" alt="Auto Update" />
+    <img src="https://img.shields.io/badge/Release-v1.0.0-111116?style=for-the-badge&logo=github" alt="v1.0.0" />
+    <img src="https://img.shields.io/badge/Rust-Pure%20Audio%20Engine-DEA584?style=for-the-badge&logo=rust&logoColor=black" alt="Rust" />
+    <img src="https://img.shields.io/badge/Background%20RAM-~12%20MB-10B981?style=for-the-badge" alt="~12 MB RAM" />
+    <img src="https://img.shields.io/badge/Auto--Update-5s%20GitHub-6366F1?style=for-the-badge" alt="Auto Update" />
     <a href="https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3">
-      <img src="https://img.shields.io/badge/VirusTotal-SHA--256%20Doğrula-394EFF?style=for-the-badge&logo=virustotal&logoColor=white" alt="VirusTotal" />
+      <img src="https://img.shields.io/badge/VirusTotal-Verify%20SHA--256-394EFF?style=for-the-badge&logo=virustotal&logoColor=white" alt="VirusTotal" />
     </a>
   </p>
 
   <p>
-    <strong>Electron şişkinliği olmadan, tamamen yerel Rust ses motoru ve cam efektli resmi YouTube Music tasarımıyla Windows masaüstü deneyimi.</strong>
+    <strong>An ultra-lightweight, pure-Rust desktop client for YouTube Music — zero Electron bloat, ~12 MB background RAM, and a frosted glass UI.</strong>
   </p>
 </div>
 
 ---
 
-## ✨ Özellikler
+## ✨ Features
 
 <div align="center">
-  <img src="assets/features-poster.svg" alt="YTM Native Özellikler" width="100%" />
+  <img src="assets/features-poster.svg" alt="YTM Native Features" width="100%" />
 </div>
 
-- **⚡ Anlık Oynatma (~350 ms):** Saf Rust Innertube HLS akış çözücü, kart üzerine gelince ön yükleme (*hover prefetch*) ve sıradaki 2 parçayı önceden hazırlama.
-- **🔍 Canlı Arama Önerileri:** Arama kutusuna yazarken anlık YouTube tamamlama önerileri ve klavye (`↑` / `↓` / `Enter` / `Esc`) desteği.
-- **↻ Akıllı Yenileme:** Üst bardaki **Yenile** tuşu (veya `F5`) her tıklamada geçmişin ve beğenilerinden farklı tohum parçalar seçerek taze öneriler getirir.
-- **🎧 Yüksek Kalite Ses Motoru:** `symphonia` + `cpal` (WASAPI), 4-noktalı *Cubic Catmull-Rom* yeniden örnekleme ve ses yüksekliği normalizasyonu.
-- **🪟 Sistem Tepsisi (WebView2 Bellek Temizliği):** Pencereyi kapattığında (`X`) WebView2 tamamen bellekten silinir; saf Rust ses motoru, otomatik radyo ve Windows medya tuşları (SMTC) **~12 MB Private RAM** ile arka planda çalışmaya devam eder.
-- **🔐 Doğrudan Google Oturumu:** Tarayıcı çerezi veya Firebase gerektirmeden uygulama içinden güvenli Google girişi ile gerçek YouTube Music geçmişin ve beğenilerin eşlenir.
-- **🌙 Ekstralar:** Şarkı sözleri (`Sözler`), Uyku Zamanlayıcısı (`🌙`), Karıştır / Tekrarla, Özel CSS, ilk açılış intro videosu ve **5 saniyede VDS'siz otomatik güncelleme**.
+- **⚡ Instant Playback (~350 ms):** Pure-Rust Innertube HLS stream resolver, hover prefetching, and automatic next-2-tracks preloading.
+- **🔍 Live Search Suggestions:** Real-time YouTube autocomplete dropdown with full keyboard navigation (`↑` / `↓` / `Enter` / `Esc`).
+- **↻ Smart Refresh:** One-click **Refresh** button (`F5` / `Ctrl+R`) that rotates seed tracks from your listening history and likes to deliver genuinely fresh mixes.
+- **🎧 High-Quality Rust Audio DSP:** Native `symphonia` AAC decoding + `cpal` (WASAPI) output with 4-point *Cubic Catmull-Rom* resampling and loudness normalization.
+- **🪟 System Tray RAM Saver:** Closing the window (`X`) completely destroys WebView2 from memory while the pure-Rust audio engine, auto-radio, and Windows media keys (SMTC) keep running at **~12 MB Private RAM** and **0% idle CPU**.
+- **🔐 Native Google Sign-In:** Sign in directly inside the app with zero Firebase or external browser cookie scraping to sync your YouTube Music history, likes, and picks.
+- **🌐 Multi-Language Support (10 Languages):** Defaults to **English**, with instant switching in Settings (`English`, `Türkçe`, `Deutsch`, `Español`, `Français`, `Português`, `Русский`, `日本語`, `한국어`, `العربية`).
+- **🚀 5-Second Serverless Auto-Updater:** Automatically checks GitHub Releases for up to 5 seconds on launch and self-updates seamlessly without requiring admin privileges.
 
 ---
 
-## 📊 Bellek ve Performans
+## 📊 Memory & Performance
 
 <div align="center">
-  <img src="assets/ram-benchmark.svg" alt="RAM Karşılaştırması" width="100%" />
-</div>
-
----
-
-## 🏗️ Mimari
-
-<div align="center">
-  <img src="assets/architecture-poster.svg" alt="Mimari Akış" width="100%" />
+  <img src="assets/ram-benchmark.svg" alt="Memory Benchmark" width="100%" />
 </div>
 
 ---
 
-## 🛡️ Güvenlik & VirusTotal Doğrulaması
+## 🏗️ Architecture
+
+<div align="center">
+  <img src="assets/architecture-poster.svg" alt="Architecture Pipeline" width="100%" />
+</div>
+
+---
+
+## 🛡️ Security & VirusTotal Verification
 
 <div align="center">
   <a href="https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3">
-    <img src="assets/security-poster.svg" alt="Güvenlik ve VirusTotal Taraması" width="100%" />
+    <img src="assets/security-poster.svg" alt="Security and VirusTotal Verification" width="100%" />
   </a>
 </div>
 
-| Dosya | Windows Defender | SHA-256 | VirusTotal |
+| File | Windows Defender | SHA-256 | VirusTotal |
 | :--- | :--- | :--- | :--- |
-| `YTM-Native-Setup-1.0.0.exe` | ✅ 0 Tehdit | `d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3` | [VirusTotal Raporu](https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3) |
-| `ytm-native.exe` | ✅ 0 Tehdit | `35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8` | [VirusTotal Raporu](https://www.virustotal.com/gui/file/35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8) |
+| `YTM-Native-Setup-1.0.0.exe` | ✅ 0 Threats | `d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3` | [VirusTotal Report](https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3) |
+| `ytm-native.exe` | ✅ 0 Threats | `35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8` | [VirusTotal Report](https://www.virustotal.com/gui/file/35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8) |
 
 ---
 
-## 📥 Kurulum
+## 📥 Installation
 
-1. **[Releases](https://github.com/Rbg4445/Ytmnative/releases/latest)** sayfasından **`YTM-Native-Setup-1.0.0.exe`** dosyasını indirin.
-2. Kurulum sihirbazını çalıştırın (yönetici izni gerektirmez, `%LOCALAPPDATA%\YTM Native` klasörüne kurulur).
-3. Yeni bir sürüm yayınlandığında uygulama her açılışta 5 saniye içinde kontrol eder ve kendini otomatik günceller.
+1. Download **`YTM-Native-Setup-1.0.0.exe`** from the **[Releases](https://github.com/Rbg4445/Ytmnative/releases/latest)** page.
+2. Run the installer (no admin/UAC required — installs per-user into `%LOCALAPPDATA%\YTM Native`).
+3. Future updates are checked automatically on startup and installed seamlessly.
 
 ---
 
-## ⌨️ Kısayollar
+## ⌨️ Keyboard Shortcuts
 
-| Kısayol | İşlev |
+| Shortcut | Action |
 | :--- | :--- |
-| `Space` | Oynat / Duraklat |
-| `Ctrl + K` veya `/` | Arama kutusuna odaklan |
-| `F5` veya `Ctrl + R` | Yeni öneriler getir (Yenile) |
-| `Ctrl + →` / `Ctrl + ←` | Sonraki / Önceki parça |
-| `→` / `←` | 5 saniye ileri / geri sar |
-| Medya Tuşları | Arka planda bile Windows SMTC ile tam kontrol |
+| `Space` | Play / Pause |
+| `Ctrl + K` or `/` | Focus search bar |
+| `F5` or `Ctrl + R` | Refresh recommendations |
+| `Ctrl + →` / `Ctrl + ←` | Next / Previous track |
+| `→` / `←` | Seek forward / backward 5 seconds |
+| Media Keys | Full hardware media key support via Windows SMTC |
 
 ---
 
-## 🛠️ Kaynaktan Derleme
+## 🛠️ Building from Source
 
 ```powershell
-# 1. Release ikilisini derle
+# 1. Build release binary
 cargo build --release
 
-# 2. Windows Setup kurulum dosyasını oluştur (Inno Setup 6)
+# 2. Build Windows Setup installer (Inno Setup 6)
 iscc installer/ytm-native.iss
 ```
 
-### Yeni Sürüm Yayınlama (Otomatik CI/CD)
+### Publishing a Release (Automated CI/CD)
 
-`Cargo.toml`, `tauri.conf.json` ve `installer/ytm-native.iss` içindeki sürümü güncelleyip etiket gönderdiğinizde GitHub Actions hem `YTM-Native-Setup-*.exe` hem de otomatik güncelleyici için `ytm-native.exe` dosyasını otomatik yayınlar:
+Update the version in `Cargo.toml`, `tauri.conf.json`, and `installer/ytm-native.iss`, then push a tag — GitHub Actions automatically builds and publishes both `YTM-Native-Setup-*.exe` and `ytm-native.exe`:
 
 ```powershell
 git tag v1.0.0
@@ -120,11 +121,10 @@ git push origin v1.0.0
 
 ---
 
-## ⚖️ Yasal Uyarı (Disclaimer) & Lisans
+## ⚖️ Disclaimer & License
 
-- **YTM Native**, bağımsız ve resmi olmayan (unofficial) açık kaynaklı bir masaüstü istemcisidir.
-- **Google LLC** veya **YouTube** ile hiçbir bağlantısı, ortaklığı veya resmi onayı bulunmamaktadır.
-- "YouTube" ve "YouTube Music", Google LLC'nin tescilli ticari markalarıdır.
-- Bu uygulama herhangi bir ses/müzik dosyası barındırmaz veya dağıtmaz; tüm içerikler doğrudan ilgili platformun herkese açık veya kullanıcının kendi oturumuna ait akışları üzerinden oynatılır.
-- Proje [MIT Lisansı](LICENSE) altında yayınlanmıştır.
-
+- **YTM Native** is an independent, unofficial open-source desktop client.
+- It is **not affiliated with, endorsed by, or associated with Google LLC or YouTube**.
+- "YouTube" and "YouTube Music" are registered trademarks of Google LLC.
+- This application does not host or distribute any audio files; all streams are played directly on the user's device from publicly available or user-authenticated sessions.
+- Released under the [MIT License](LICENSE).
