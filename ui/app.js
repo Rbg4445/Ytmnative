@@ -293,6 +293,7 @@ function toggleQueue() {
   state.queueOpen = !state.queueOpen;
   const drawer = document.getElementById("queue-drawer");
   const btn = document.getElementById("btn-toggle-queue");
+  document.body.classList.toggle("queue-open", state.queueOpen);
   if (state.queueOpen) {
     drawer.classList.remove("hidden");
     drawer.classList.add("flex");
@@ -536,7 +537,7 @@ function renderQuickAccessTiles() {
             return `
               <div onclick="navigate('liked')" class="quick-tile">
                 <div class="w-[52px] h-[52px] bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#FF0033] flex items-center justify-center text-lg text-white shrink-0">♥</div>
-                <div class="text-[13px] font-bold text-white line-clamp-2 leading-tight">${esc(it.title)}</div>
+                <div class="flex-1 min-w-0 text-[13px] font-bold text-white line-clamp-2 leading-tight">${esc(it.title)}</div>
                 <div class="quick-tile-play">▶</div>
               </div>
             `;
@@ -547,7 +548,7 @@ function renderQuickAccessTiles() {
                 <div class="w-[52px] h-[52px] bg-[#222228] flex items-center justify-center text-neutral-400 shrink-0 overflow-hidden">
                   ${it.cover ? `<img src="${esc(it.cover)}" loading="lazy" alt="" class="w-full h-full object-cover" />` : "♫"}
                 </div>
-                <div class="text-[13px] font-bold text-white line-clamp-2 leading-tight">${esc(it.title)}</div>
+                <div class="flex-1 min-w-0 text-[13px] font-bold text-white line-clamp-2 leading-tight">${esc(it.title)}</div>
                 <div class="quick-tile-play">▶</div>
               </div>
             `;
@@ -558,7 +559,7 @@ function renderQuickAccessTiles() {
                 <div class="w-[52px] h-[52px] bg-[#222228] flex items-center justify-center text-neutral-300 shrink-0 overflow-hidden">
                   ${it.cover ? `<img src="${esc(it.cover)}" loading="lazy" alt="" class="w-full h-full object-cover" />` : "🎤"}
                 </div>
-                <div class="text-[13px] font-bold text-white line-clamp-2 leading-tight">${esc(it.title)}</div>
+                <div class="flex-1 min-w-0 text-[13px] font-bold text-white line-clamp-2 leading-tight">${esc(it.title)}</div>
                 <div class="quick-tile-play">▶</div>
               </div>
             `;
@@ -570,7 +571,7 @@ function renderQuickAccessTiles() {
               <div class="w-[52px] h-[52px] bg-[#222228] shrink-0 overflow-hidden">
                 ${it.cover ? `<img src="${esc(it.cover)}" loading="lazy" alt="" class="w-full h-full object-cover" />` : ""}
               </div>
-              <div class="text-[13px] font-bold ${active ? "text-[#FF0033]" : "text-white"} line-clamp-2 leading-tight">${esc(it.title)}</div>
+              <div class="flex-1 min-w-0 text-[13px] font-bold ${active ? "text-[#FF0033]" : "text-white"} line-clamp-2 leading-tight">${esc(it.title)}</div>
               <div class="quick-tile-play">▶</div>
             </div>
           `;
@@ -693,7 +694,7 @@ function renderTrackRows(tracks, opts = {}) {
                   opts.playlistId
                     ? `<button onclick="removeFromPlaylist('${esc(opts.playlistId)}', '${esc(t.id)}')" title="Listeden çıkar" class="text-xs text-neutral-400 hover:text-white px-1.5 cursor-pointer">✕</button>`
                     : state.library.playlists.length > 0
-                    ? `<select onchange="addToPlaylistSelect(this, ${safeTrack})" class="bg-[#1b1b1b] border border-white/10 text-[11px] text-neutral-300 rounded px-1.5 py-1 cursor-pointer focus:outline-none">
+                    ? `<select onchange="addToPlaylistSelect(this, ${safeTrack})" class="w-[76px] truncate bg-[#1b1b1b] border border-white/10 text-[11px] text-neutral-300 rounded px-1.5 py-1 cursor-pointer focus:outline-none">
                         <option value="">+ Liste</option>
                         ${state.library.playlists
                           .map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`)
@@ -757,7 +758,7 @@ function renderMain() {
           ? `
         <section class="mb-10">
           <h2 class="text-xl font-bold mb-4 text-white">Çalma Listelerin</h2>
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div class="grid grid-cols-2 @lg:grid-cols-3 @2xl:grid-cols-4 @4xl:grid-cols-5 gap-4">
             <div onclick="navigate('liked')" class="p-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition cursor-pointer">
               <div class="w-full aspect-square rounded-lg bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#FF0033] flex items-center justify-center text-3xl text-white shadow-lg mb-3">♥</div>
               <div class="font-bold text-sm text-white truncate">${esc(t("likedMusic"))}</div>
@@ -778,7 +779,7 @@ function renderMain() {
           ? `
         <section class="mb-10">
           <h2 class="text-xl font-bold mb-4 text-white">Takip Ettiğin ve Önerilen Sanatçılar</h2>
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div class="grid grid-cols-2 @lg:grid-cols-3 @2xl:grid-cols-4 @4xl:grid-cols-5 gap-4">
             ${getSidebarArtists().map(a => `
               <div onclick="openArtist('${esc(a.id || "")}', '${esc(a.name)}')" class="p-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition cursor-pointer text-center">
                 <div class="w-28 h-28 mx-auto rounded-full overflow-hidden bg-[#222228] shadow-md mb-3">
@@ -845,7 +846,7 @@ function renderMain() {
     main.innerHTML = `
       <h1 class="text-[30px] font-bold mb-6">Keşfet</h1>
       <h2 class="text-lg font-semibold mb-3 text-neutral-200">Ruh halleri ve türler</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+      <div class="grid grid-cols-2 @lg:grid-cols-3 @2xl:grid-cols-5 gap-3">
         ${MOODS.map(
           ([label, query]) => `
           <button onclick="navigate('home'); selectMood('${esc(label)}', '${esc(query)}')" class="h-12 px-4 rounded-lg bg-[#1d1d1d] hover:bg-[#2a2a2a] border-l-4 border-[#FF0033] text-left text-sm font-medium text-white transition cursor-pointer">
@@ -860,7 +861,7 @@ function renderMain() {
   if (state.page === "library") {
     main.innerHTML = `
       <h1 class="text-[30px] font-bold mb-6">Kitaplık</h1>
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+      <div class="grid grid-cols-2 @lg:grid-cols-3 @2xl:grid-cols-4 @4xl:grid-cols-5 gap-5">
         <div onclick="navigate('liked')" class="group cursor-pointer">
           <div class="w-full aspect-square rounded-md bg-gradient-to-br from-[#FF0033] to-[#4a0817] flex items-center justify-center text-5xl text-white shadow-lg group-hover:scale-[1.02] transition">♥</div>
           <div class="mt-2.5 text-sm font-semibold text-white">Beğendiğim müzikler</div>
@@ -952,19 +953,19 @@ function renderMain() {
 
     main.innerHTML = `
       <!-- ARTIST HERO BANNER -->
-      <div class="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#2a0c18] via-[#15151c] to-[#0c0c10] border border-white/10 p-6 mb-7 flex flex-col sm:flex-row items-center sm:items-end gap-6 shadow-2xl">
-        <div class="w-36 h-36 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-[#222228] border-2 border-white/20 shadow-2xl shrink-0">
+      <div class="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#2a0c18] via-[#15151c] to-[#0c0c10] border border-white/10 p-6 mb-7 flex flex-col @xl:flex-row items-center @xl:items-end gap-6 shadow-2xl">
+        <div class="w-32 h-32 @xl:w-44 @xl:h-44 rounded-full overflow-hidden bg-[#222228] border-2 border-white/20 shadow-2xl shrink-0">
           ${
             art.avatar_url || currentCollectionTracks[0]?.thumbnail_url
               ? `<img src="${esc(art.avatar_url || currentCollectionTracks[0]?.thumbnail_url)}" alt="" class="w-full h-full artist-round" />`
               : `<div class="w-full h-full flex items-center justify-center text-5xl font-bold text-neutral-400">${esc(art.name.charAt(0))}</div>`
           }
         </div>
-        <div class="flex-1 min-w-0 text-center sm:text-left">
+        <div class="flex-1 min-w-0 text-center @xl:text-left">
           <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FF0033]/20 border border-[#FF0033]/40 text-[11px] font-bold text-[#FF4D6D] mb-2">
             <span>✓ Doğrulanmış Sanatçı</span>
           </div>
-          <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white truncate">${esc(art.name)}</h1>
+          <h1 class="text-3xl @2xl:text-5xl font-extrabold tracking-tight text-white truncate">${esc(art.name)}</h1>
           ${
             art.subscriber_count
               ? `<div class="text-sm text-neutral-300 mt-1.5">${esc(fmtCount(art.subscriber_count))}</div>`
@@ -975,7 +976,7 @@ function renderMain() {
               ? `<p class="text-xs text-neutral-400 mt-2 line-clamp-2 max-w-2xl">${esc(art.description)}</p>`
               : ""
           }
-          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-5">
+          <div class="flex flex-wrap items-center justify-center @xl:justify-start gap-3 mt-5">
             ${
               currentCollectionTracks.length > 0
                 ? `<button onclick="playCollectionIndex(0)" class="px-6 py-2.5 rounded-full bg-[#FF0033] hover:bg-[#e0002d] text-white text-sm font-bold shadow-lg transition cursor-pointer">▶ Oynat</button>`
@@ -1096,20 +1097,54 @@ function renderMain() {
               </div>
             </div>`
             : `
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 class="text-base font-semibold text-white">${esc(t("googleSignInTitle"))}</h3>
-                <p class="text-xs text-neutral-400 mt-1">${esc(t("googleSignInSub"))}</p>
+            <div class="space-y-4">
+              <!-- Method 1: Google Popup Sign-in -->
+              <div class="flex flex-col @lg:flex-row @lg:items-center justify-between gap-4 p-4 rounded-xl bg-white/[0.04] border border-white/10">
+                <div>
+                  <h3 class="text-base font-semibold text-white">${esc(t("googleSignInTitle"))}</h3>
+                  <p class="text-xs text-neutral-400 mt-1">${esc(t("googleSignInSub"))}</p>
+                </div>
+                <button ${state.authBusy ? "disabled" : ""} onclick="loginWithGoogle()" class="shrink-0 flex items-center justify-center gap-3 px-5 py-2.5 rounded-full bg-white hover:bg-neutral-100 disabled:opacity-50 text-[#1f1f1f] text-sm font-semibold shadow-lg transition cursor-pointer">
+                  <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47a5.54 5.54 0 0 1-2.4 3.63v3.01h3.88c2.27-2.09 3.54-5.17 3.54-8.88Z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.94-2.91l-3.88-3.01c-1.08.72-2.45 1.16-4.06 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.11A12 12 0 0 0 12 24Z"/>
+                    <path fill="#FBBC05" d="M5.28 14.28A7.22 7.22 0 0 1 4.9 12c0-.79.14-1.56.38-2.28V6.61H1.29A12 12 0 0 0 0 12c0 1.94.46 3.77 1.29 5.39l3.99-3.11Z"/>
+                    <path fill="#EA4335" d="M12 4.76c1.76 0 3.34.61 4.59 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.29 6.61l3.99 3.11c.95-2.85 3.6-4.96 6.72-4.96Z"/>
+                  </svg>
+                  <span>${state.authBusy ? esc(t("waitingLogin")) : esc(t("googleSignInBtn"))}</span>
+                </button>
               </div>
-              <button ${state.authBusy ? "disabled" : ""} onclick="loginWithGoogle()" class="shrink-0 flex items-center justify-center gap-3 px-5 py-2.5 rounded-full bg-white hover:bg-neutral-100 disabled:opacity-50 text-[#1f1f1f] text-sm font-semibold shadow-lg transition cursor-pointer">
-                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47a5.54 5.54 0 0 1-2.4 3.63v3.01h3.88c2.27-2.09 3.54-5.17 3.54-8.88Z"/>
-                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.94-2.91l-3.88-3.01c-1.08.72-2.45 1.16-4.06 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.11A12 12 0 0 0 12 24Z"/>
-                  <path fill="#FBBC05" d="M5.28 14.28A7.22 7.22 0 0 1 4.9 12c0-.79.14-1.56.38-2.28V6.61H1.29A12 12 0 0 0 0 12c0 1.94.46 3.77 1.29 5.39l3.99-3.11Z"/>
-                  <path fill="#EA4335" d="M12 4.76c1.76 0 3.34.61 4.59 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.29 6.61l3.99 3.11c.95-2.85 3.6-4.96 6.72-4.96Z"/>
-                </svg>
-                <span>${state.authBusy ? esc(t("waitingLogin")) : esc(t("googleSignInBtn"))}</span>
-              </button>
+
+              <!-- Method 2: 1-Click Browser Cookie Import -->
+              <div class="p-4 rounded-xl bg-white/[0.04] border border-white/10 space-y-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-white">⚡ Tarayıcından 1-Tıkla Aktar (Önerilen)</h3>
+                  <p class="text-xs text-neutral-400 mt-0.5">Google pop-up güvenliği izin vermezse, tarayıcında açık olan YouTube Music oturumunu tek tıkla doğrudan aktarabilirsin.</p>
+                </div>
+                <div class="flex flex-wrap gap-2 pt-1">
+                  <button ${state.authBusy ? "disabled" : ""} onclick="connectBrowser('chrome')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium text-white transition cursor-pointer flex items-center gap-1.5">
+                    <span>🌐 Chrome ile Bağlan</span>
+                  </button>
+                  <button ${state.authBusy ? "disabled" : ""} onclick="connectBrowser('edge')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium text-white transition cursor-pointer flex items-center gap-1.5">
+                    <span>🌀 Edge ile Bağlan</span>
+                  </button>
+                  <button ${state.authBusy ? "disabled" : ""} onclick="connectBrowser('brave')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium text-white transition cursor-pointer flex items-center gap-1.5">
+                    <span>🦁 Brave ile Bağlan</span>
+                  </button>
+                  <button ${state.authBusy ? "disabled" : ""} onclick="connectBrowser('firefox')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium text-white transition cursor-pointer flex items-center gap-1.5">
+                    <span>🦊 Firefox ile Bağlan</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Method 3: Manual Cookie Paste -->
+              <details class="p-4 rounded-xl bg-white/[0.02] border border-white/10 text-xs">
+                <summary class="font-medium text-neutral-300 hover:text-white cursor-pointer select-none">Manuel Çerez (Cookie) Yapıştırarak Giriş Yap</summary>
+                <div class="mt-3 space-y-2">
+                  <textarea id="cookie-input" rows="2" placeholder="SAPISID=...; __Secure-3PAPISID=... veya Netscape formatında çerez" class="w-full bg-black/50 border border-white/15 rounded-lg p-2 text-xs font-mono text-white focus:outline-none"></textarea>
+                  <button ${state.authBusy ? "disabled" : ""} onclick="connectCookies()" class="px-4 py-1.5 rounded-lg bg-[#FF0033] hover:bg-[#e0002d] text-white font-medium cursor-pointer">Çerezi Doğrula ve Bağlan</button>
+                </div>
+              </details>
             </div>`
         }
         ${state.authMsg ? `<div class="text-xs text-emerald-400">${esc(state.authMsg)}</div>` : ""}
@@ -1187,7 +1222,7 @@ function renderMain() {
           </div>
           <input id="chk-lastfm" type="checkbox" ${state.library.lastfm_enabled ? "checked" : ""} onchange="saveIntegrations()" class="w-4 h-4 accent-[#FF0033] cursor-pointer" />
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div class="grid grid-cols-1 @lg:grid-cols-3 gap-2">
           <input id="lastfm-key" type="text" placeholder="Last.fm API Key" value="${esc(state.library.lastfm_api_key || "")}" class="bg-[#0a0a0a] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white" />
           <input id="lastfm-secret" type="password" placeholder="Shared Secret" value="${esc(state.library.lastfm_secret || "")}" class="bg-[#0a0a0a] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white" />
           <input id="lastfm-sk" type="password" placeholder="Session Key (sk)" value="${esc(state.library.lastfm_session_key || "")}" class="bg-[#0a0a0a] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white" />
@@ -1444,8 +1479,8 @@ function switchDrawerTab(tab) {
   const qList = document.getElementById("queue-list");
   const lPanel = document.getElementById("lyrics-panel");
 
-  const activeCls = "text-xs font-bold tracking-wider uppercase text-white border-b-2 border-[#FF0033] pb-1 cursor-pointer";
-  const idleCls = "text-xs font-bold tracking-wider uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer";
+  const activeCls = "text-[11px] font-bold tracking-wide uppercase text-white border-b-2 border-[#FF0033] pb-1 cursor-pointer";
+  const idleCls = "text-[11px] font-bold tracking-wide uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer";
 
   if (nTab) nTab.className = tab === "now" ? activeCls : idleCls;
   if (lTab) lTab.className = tab === "lyrics" ? activeCls : idleCls;
@@ -2094,12 +2129,7 @@ async function installUpdate() {
 
 document.getElementById("btn-toggle-sidebar").addEventListener("click", () => {
   state.sidebarExpanded = !state.sidebarExpanded;
-  const sb = document.getElementById("sidebar");
-  sb.classList.toggle("w-[280px]", state.sidebarExpanded);
-  sb.classList.toggle("w-[76px]", !state.sidebarExpanded);
-  document.querySelectorAll(".sidebar-label").forEach((el) => {
-    el.classList.toggle("hidden", !state.sidebarExpanded);
-  });
+  document.getElementById("sidebar").classList.toggle("sidebar-collapsed", !state.sidebarExpanded);
 });
 
 let suggestTimer = null;
@@ -2113,58 +2143,144 @@ function hideSuggestions() {
   suggestActiveIdx = -1;
 }
 
+// Rich previews (top artists + songs) for the current query, filled from the live search_all result.
+let suggestPreview = { query: "", artists: [], tracks: [] };
+// Flat list of everything shown in the dropdown (text suggestions, artists, songs) for keyboard nav.
+let dropdownItems = [];
+
+function buildDropdownItems() {
+  const q = (document.getElementById("search-input")?.value || "").trim();
+  const items = suggestItems.slice(0, 5).map((text) => ({ type: "text", text }));
+  if (q && suggestPreview.query === q) {
+    suggestPreview.artists.slice(0, 2).forEach((artist) => items.push({ type: "artist", artist }));
+    suggestPreview.tracks.slice(0, 4).forEach((track) => items.push({ type: "track", track }));
+  }
+  return items;
+}
+
 function renderSuggestions() {
   const box = document.getElementById("search-suggestions");
   if (!box) return;
-  if (!suggestItems.length) {
+  dropdownItems = buildDropdownItems();
+  if (!dropdownItems.length) {
     box.classList.add("hidden");
     return;
   }
-  box.innerHTML = suggestItems
-    .map((text, idx) => {
-      const active = idx === suggestActiveIdx;
-      return `
-        <button type="button" onmousedown="event.preventDefault(); selectSuggestion(${idx})" onmouseenter="suggestActiveIdx=${idx}; renderSuggestions()" class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-[13.5px] transition cursor-pointer ${
-          active ? "bg-white/[0.14] text-white" : "text-neutral-200 hover:bg-white/[0.08]"
-        }">
+  if (suggestActiveIdx >= dropdownItems.length) suggestActiveIdx = -1;
+
+  const rowCls = (idx) =>
+    `w-full flex items-center gap-3 px-3.5 text-left transition cursor-pointer ${
+      idx === suggestActiveIdx ? "bg-white/[0.14] text-white" : "text-neutral-200 hover:bg-white/[0.08]"
+    }`;
+  const rowEvents = (idx) =>
+    `onmousedown="event.preventDefault(); selectDropdownItem(${idx})" onmouseenter="suggestActiveIdx=${idx}; renderSuggestions()"`;
+
+  let html = "";
+  let prevType = null;
+  dropdownItems.forEach((item, idx) => {
+    if (prevType === "text" && item.type !== "text") {
+      html += `<div class="h-px bg-white/[0.08] my-1.5 mx-3"></div>`;
+    }
+    prevType = item.type;
+
+    if (item.type === "text") {
+      html += `
+        <button type="button" ${rowEvents(idx)} class="${rowCls(idx)} py-2.5 text-[13.5px]">
           <svg class="w-4 h-4 text-neutral-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" />
           </svg>
-          <span class="truncate">${esc(text)}</span>
-        </button>
-      `;
-    })
-    .join("");
+          <span class="truncate">${esc(item.text)}</span>
+        </button>`;
+    } else if (item.type === "artist") {
+      const a = item.artist;
+      const sub = fmtCount(a.subscriber_count);
+      html += `
+        <button type="button" ${rowEvents(idx)} class="${rowCls(idx)} py-2">
+          ${
+            a.avatar_url
+              ? `<img src="${esc(a.avatar_url)}" alt="" class="w-10 h-10 rounded-full object-cover bg-neutral-800 shrink-0" />`
+              : `<div class="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center text-sm font-bold shrink-0">${esc((a.name || "?")[0])}</div>`
+          }
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] font-semibold text-white truncate">${esc(a.name)}</div>
+            <div class="text-[12px] text-neutral-400 truncate">Sanatçı${sub ? ` • ${esc(sub)}` : ""}</div>
+          </div>
+        </button>`;
+    } else if (item.type === "track") {
+      const t = item.track;
+      const meta = [t.artist, t.duration_secs ? fmtSec(t.duration_secs) : ""].filter(Boolean).join(" • ");
+      html += `
+        <button type="button" ${rowEvents(idx)} class="${rowCls(idx)} py-2 group">
+          <div class="relative w-10 h-10 rounded overflow-hidden bg-neutral-800 shrink-0">
+            ${t.thumbnail_url ? `<img src="${esc(t.thumbnail_url)}" alt="" class="w-full h-full object-cover" />` : ""}
+            <div class="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+              <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] font-semibold text-white truncate">${esc(t.title)}</div>
+            <div class="text-[12px] text-neutral-400 truncate">Şarkı${meta ? ` • ${esc(meta)}` : ""}</div>
+          </div>
+        </button>`;
+    }
+  });
+  box.innerHTML = html;
   box.classList.remove("hidden");
 }
 
-function selectSuggestion(idx) {
-  const text = suggestItems[idx];
-  if (!text) return;
-  const input = document.getElementById("search-input");
-  if (input) input.value = text;
-  hideSuggestions();
-  executeSearch(text);
+function selectDropdownItem(idx) {
+  const item = dropdownItems[idx];
+  if (!item) return;
+  if (item.type === "text") {
+    const input = document.getElementById("search-input");
+    if (input) input.value = item.text;
+    hideSuggestions();
+    executeSearch(item.text);
+  } else if (item.type === "artist") {
+    hideSuggestions();
+    openArtist(item.artist.id, item.artist.name);
+  } else if (item.type === "track") {
+    hideSuggestions();
+    playTrackJson(item.track);
+  }
 }
 
-async function executeSearch(rawQuery) {
+let searchReqId = 0;
+let liveSearchTimer = null;
+
+async function executeSearch(rawQuery, opts = {}) {
   const query = (rawQuery || "").trim();
   if (!query) return;
-  hideSuggestions();
+  if (liveSearchTimer) clearTimeout(liveSearchTimer);
+  // Live (as-you-type) searches keep the suggestion dropdown open; explicit ones close it.
+  if (!opts.live) hideSuggestions();
+  // Same query already shown (or in flight) — nothing to do for a live search.
+  if (opts.live && state.page === "search" && state.searchQuery === query) return;
+  const reqId = ++searchReqId;
   state.searchQuery = query;
   state.searching = true;
   state.searchArtists = [];
   state.searchResults = [];
-  navigate("search");
+  // Don't push a history entry for every keystroke once we're on the search page.
+  if (state.page === "search") renderMain();
+  else navigate("search");
   try {
     const bundle = await invoke("search_all", { query });
+    if (reqId !== searchReqId) return; // a newer search superseded this one
     state.searchArtists = bundle.artists || [];
     state.searchResults = bundle.tracks || [];
+    // Feed the dropdown's artist/song previews; only shown while it's still open for this query.
+    suggestPreview = { query, artists: state.searchArtists, tracks: state.searchResults };
+    const input = document.getElementById("search-input");
+    if (opts.live && document.activeElement === input && input.value.trim() === query) {
+      renderSuggestions();
+    }
   } catch (err) {
+    if (reqId !== searchReqId) return;
     showBanner(`⚠ Arama hatası: ${err}`, true);
   }
   state.searching = false;
-  renderMain();
+  if (state.page === "search") renderMain();
 }
 
 const searchInputEl = document.getElementById("search-input");
@@ -2172,10 +2288,15 @@ const searchInputEl = document.getElementById("search-input");
 searchInputEl.addEventListener("input", () => {
   const q = searchInputEl.value.trim();
   if (suggestTimer) clearTimeout(suggestTimer);
+  if (liveSearchTimer) clearTimeout(liveSearchTimer);
   if (!q) {
     suggestItems = [];
     hideSuggestions();
     return;
+  }
+  // Live search: run the real search once the user pauses typing (no Enter needed).
+  if (q.length >= 2) {
+    liveSearchTimer = setTimeout(() => executeSearch(q, { live: true }), 450);
   }
   const reqId = ++suggestReqId;
   suggestTimer = setTimeout(async () => {
@@ -2186,30 +2307,32 @@ searchInputEl.addEventListener("input", () => {
       suggestActiveIdx = -1;
       renderSuggestions();
     } catch (_) {
-      if (reqId === suggestReqId) hideSuggestions();
+      if (reqId !== suggestReqId) return;
+      suggestItems = [];
+      renderSuggestions(); // still shows artist/song previews if we have them
     }
   }, 130);
 });
 
 searchInputEl.addEventListener("focus", () => {
-  if (searchInputEl.value.trim() && suggestItems.length) {
+  if (searchInputEl.value.trim()) {
     renderSuggestions();
   }
 });
 
 searchInputEl.addEventListener("keydown", async (e) => {
   const box = document.getElementById("search-suggestions");
-  const isOpen = box && !box.classList.contains("hidden") && suggestItems.length > 0;
+  const isOpen = box && !box.classList.contains("hidden") && dropdownItems.length > 0;
 
   if (e.key === "ArrowDown" && isOpen) {
     e.preventDefault();
-    suggestActiveIdx = (suggestActiveIdx + 1) % suggestItems.length;
+    suggestActiveIdx = (suggestActiveIdx + 1) % dropdownItems.length;
     renderSuggestions();
     return;
   }
   if (e.key === "ArrowUp" && isOpen) {
     e.preventDefault();
-    suggestActiveIdx = suggestActiveIdx <= 0 ? suggestItems.length - 1 : suggestActiveIdx - 1;
+    suggestActiveIdx = suggestActiveIdx <= 0 ? dropdownItems.length - 1 : suggestActiveIdx - 1;
     renderSuggestions();
     return;
   }
@@ -2219,8 +2342,8 @@ searchInputEl.addEventListener("keydown", async (e) => {
   }
   if (e.key === "Enter") {
     e.preventDefault();
-    if (isOpen && suggestActiveIdx >= 0 && suggestItems[suggestActiveIdx]) {
-      selectSuggestion(suggestActiveIdx);
+    if (isOpen && suggestActiveIdx >= 0 && dropdownItems[suggestActiveIdx]) {
+      selectDropdownItem(suggestActiveIdx);
     } else {
       executeSearch(searchInputEl.value);
     }

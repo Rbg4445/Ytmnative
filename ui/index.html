@@ -6,45 +6,46 @@
   <title>YTM Native</title>
   <link rel="stylesheet" href="tailwind.css" />
   <style id="simpmusic-ui-css">
-    /* SimpMusic Inspired Material 3 Desktop UI Design */
-    :root {
-      --m3-bg: #0f1015;
-      --m3-surface: #171821;
-      --m3-surface-variant: #22232e;
-      --m3-primary: #FF0033;
-      --m3-primary-container: rgba(255, 0, 51, 0.14);
-      --m3-on-surface: #f1f0f7;
-      --m3-on-variant: #9b9aa6;
-    }
-    body {
-      background-color: var(--m3-bg);
-      color: var(--m3-on-surface);
+    /* Seamless Frosted Glass Acrylic Desktop Design (Spotify / Bento / SimpMusic) */
+    html, body {
+      background: transparent !important;
+      color: #f1f0f7;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
     }
-    .simpmusic-shell {
+    .glass-header {
+      background: rgba(14, 14, 18, 0.72) !important;
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .simpmusic-shell, .bento-shell {
       display: flex;
       flex: 1;
       min-height: 0;
-      gap: 12px;
-      padding: 0 14px 10px 14px;
+      gap: 10px;
+      padding: 0 10px 10px 10px;
       overflow: hidden;
       position: relative;
       z-index: 10;
     }
-    .m3-card {
-      background: var(--m3-surface);
-      border-radius: 20px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.04);
-    }
-    .m3-floating-player {
-      background: rgba(23, 24, 33, 0.94);
+    .m3-card, .bento-card, .glass-card {
+      background: rgba(18, 18, 24, 0.72) !important;
       backdrop-filter: blur(28px);
       -webkit-backdrop-filter: blur(28px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 20px;
-      margin: 0 14px 12px 14px;
-      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .glass-player {
+      background: rgba(12, 12, 16, 0.88) !important;
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
     .m3-nav-item {
       display: flex;
@@ -52,7 +53,7 @@
       gap: 12px;
       padding: 9px 14px;
       border-radius: 9999px;
-      color: var(--m3-on-variant);
+      color: #a0a0ab;
       font-weight: 500;
       font-size: 13.5px;
       transition: all 0.16s ease;
@@ -63,8 +64,8 @@
       color: #fff;
     }
     .m3-nav-item.active {
-      background: var(--m3-primary-container);
-      color: #FF5C7A;
+      background: rgba(255, 0, 51, 0.15);
+      color: #FF4D6D;
       font-weight: 700;
     }
     .quick-grid {
@@ -72,7 +73,7 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
     }
-    @media (min-width: 900px) {
+    @container (min-width: 620px) {
       .quick-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
       }
@@ -82,15 +83,16 @@
       align-items: center;
       gap: 12px;
       height: 56px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
       overflow: hidden;
       cursor: pointer;
-      transition: background 0.16s ease;
+      transition: background 0.16s ease, transform 0.16s ease;
       padding-right: 12px;
     }
     .quick-tile:hover {
-      background: rgba(255, 255, 255, 0.10);
+      background: rgba(255, 255, 255, 0.12);
     }
     .quick-tile-play {
       margin-left: auto;
@@ -105,7 +107,7 @@
       opacity: 0;
       transform: translateY(2px);
       transition: all 0.16s ease;
-      box-shadow: 0 4px 12px rgba(255, 0, 51, 0.4);
+      box-shadow: 0 4px 14px rgba(255, 0, 51, 0.45);
       flex-shrink: 0;
     }
     .quick-tile:hover .quick-tile-play,
@@ -121,12 +123,48 @@
       width: 100%;
       height: 4px;
       border-radius: 9999px;
-      background: rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.18);
       position: relative;
       transition: height 0.12s ease;
     }
     .group:hover .seek-rail {
       height: 6px;
+    }
+    /* Sidebar width + collapsed (icon-only) mode. Driven by classes so re-renders keep the state. */
+    #sidebar {
+      width: 240px;
+    }
+    #sidebar.sidebar-collapsed {
+      width: 76px;
+    }
+    #sidebar.sidebar-collapsed .sidebar-label {
+      display: none !important;
+    }
+    #sidebar.sidebar-collapsed .m3-nav-item {
+      justify-content: center;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    #queue-drawer {
+      width: 320px;
+    }
+    /* Narrow windows: when the right drawer is open, shrink the sidebar to icons
+       so the center column never gets squeezed into overflow. */
+    @media (max-width: 1150px) {
+      body.queue-open #sidebar {
+        width: 76px;
+      }
+      body.queue-open #sidebar .sidebar-label {
+        display: none !important;
+      }
+      body.queue-open #sidebar .m3-nav-item {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      #queue-drawer {
+        width: 290px;
+      }
     }
   </style>
   <style id="theme-preset-css"></style>
@@ -199,8 +237,8 @@
     <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/65 to-black/85"></div>
   </div>
 
-  <!-- TOP NAVIGATION BAR (Clean, Spacious, Spotify/Modern Desktop Style) -->
-  <header class="h-14 shrink-0 flex items-center justify-between px-4 gap-3 relative z-30 select-none">
+  <!-- TOP NAVIGATION BAR (Clean, Seamless Frosted Glass, Spotify / Modern Desktop Style) -->
+  <header class="glass-header h-14 shrink-0 flex items-center justify-between px-4 gap-3 relative z-30 select-none">
     <!-- Left: Sidebar Toggle + Brand + History Back/Forward -->
     <div class="flex items-center gap-2">
       <button id="btn-toggle-sidebar" title="Kitaplığı daralt / genişlet" class="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
@@ -225,29 +263,29 @@
         <span class="text-[15px] font-bold tracking-tight text-white hidden sm:inline">YTM Native</span>
       </div>
       <div class="flex items-center gap-1 ml-1">
-        <button onclick="navBack()" title="Geri" class="w-7 h-7 rounded-full bg-black/40 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
+        <button onclick="navBack()" title="Geri" class="w-7 h-7 rounded-full bg-white/[0.06] hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </button>
-        <button onclick="navForward()" title="İleri" class="w-7 h-7 rounded-full bg-black/40 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
+        <button onclick="navForward()" title="İleri" class="w-7 h-7 rounded-full bg-white/[0.06] hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
         </button>
       </div>
     </div>
 
     <!-- Center: Home Button + Pill Search Box -->
-    <div class="flex items-center justify-center gap-2 flex-1 max-w-[500px]">
-      <button data-nav="home" onclick="navigate('home')" title="Ana Sayfa" class="nav-top-pill w-9 h-9 rounded-full bg-[#1f1f24] hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition cursor-pointer shrink-0">
+    <div class="flex items-center justify-center gap-2 flex-1 max-w-[520px]">
+      <button data-nav="home" onclick="navigate('home')" title="Ana Sayfa" class="nav-top-pill w-10 h-10 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.08] flex items-center justify-center text-white transition cursor-pointer shrink-0">
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3.2 4 9.6V20h5.5v-6h5v6H20V9.6l-8-6.4Z"/></svg>
       </button>
 
       <div id="search-box-wrap" class="relative flex-1">
-        <div class="flex items-center gap-2.5 bg-[#1f1f24]/90 hover:bg-[#28282f] border border-white/[0.08] focus-within:bg-[#18181c] focus-within:border-white/30 rounded-full px-3.5 h-9 transition">
+        <div class="flex items-center gap-2.5 bg-white/[0.07] hover:bg-white/[0.12] border border-white/[0.08] focus-within:bg-[#16161c]/95 focus-within:border-white/30 rounded-full px-4 h-10 transition">
           <svg class="w-4 h-4 text-neutral-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" />
           </svg>
-          <input id="search-input" type="text" autocomplete="off" data-i18n-placeholder="searchPlaceholder" placeholder="Ne çalmak istiyorsun?" class="w-full bg-transparent text-[13px] text-white placeholder-neutral-400 focus:outline-none" />
+          <input id="search-input" type="text" autocomplete="off" data-i18n-placeholder="searchPlaceholder" placeholder="Ne çalmak istiyorsun?" class="w-full bg-transparent text-[13.5px] text-white placeholder-neutral-400 focus:outline-none" />
         </div>
-        <div id="search-suggestions" class="hidden absolute left-0 right-0 top-11 rounded-xl bg-[#141418]/95 backdrop-blur-2xl border border-white/15 shadow-[0_18px_50px_rgba(0,0,0,0.85)] py-1.5 overflow-hidden z-50"></div>
+        <div id="search-suggestions" class="hidden absolute left-0 right-0 top-12 rounded-xl bg-[#141418]/95 backdrop-blur-2xl border border-white/15 shadow-[0_18px_50px_rgba(0,0,0,0.85)] py-1.5 max-h-[70vh] overflow-y-auto z-50"></div>
       </div>
     </div>
 
@@ -260,11 +298,11 @@
     </div>
   </header>
 
-  <!-- SIMPMUSIC MATERIAL 3 WORKSPACE: [LEFT SLIM NAV & LIBRARY] + [CENTER VIEWPORT] + [RIGHT DRAWER] -->
-  <div class="simpmusic-shell">
+  <!-- 3-PANE WORKSPACE: [LEFT SLIM NAV & LIBRARY] + [CENTER VIEWPORT] + [RIGHT DRAWER] -->
+  <div class="simpmusic-shell bento-shell">
 
     <!-- LEFT CARD: NAVIGATION & LIBRARY (SimpMusic Style) -->
-    <aside id="sidebar" class="m3-card w-[240px] shrink-0 flex flex-col p-3 transition-all duration-150 select-none">
+    <aside id="sidebar" class="m3-card glass-card w-[250px] shrink-0 flex flex-col p-3 transition-all duration-150 select-none">
       <!-- Main Nav Items (SimpMusic Style) -->
       <div class="space-y-1 mb-2">
         <div data-nav="home" onclick="navigate('home')" class="m3-nav-item active">
@@ -315,24 +353,24 @@
     </aside>
 
     <!-- CENTER CARD: MAIN SCROLLABLE VIEWPORT -->
-    <div class="m3-card flex-1 flex flex-col min-w-0 relative">
+    <div class="m3-card glass-card flex-1 flex flex-col min-w-0 relative">
       <!-- ERROR / STATUS TOAST -->
       <div id="status-banner" class="hidden mx-6 mt-3 px-3.5 py-2 rounded-xl text-xs backdrop-blur-md"></div>
 
       <!-- SCROLLABLE MAIN CONTENT -->
-      <main id="main-content" class="flex-1 overflow-y-auto px-7 pt-5 pb-8"></main>
+      <main id="main-content" class="@container flex-1 overflow-y-auto px-7 pt-5 pb-8"></main>
     </div>
 
     <!-- RIGHT CARD: NOW PLAYING STUDIO PANEL (Hidden by default, opens on demand!) -->
-    <aside id="queue-drawer" class="m3-card hidden w-[320px] shrink-0 flex-col px-4 py-3.5 select-none transition-all duration-200">
+    <aside id="queue-drawer" class="m3-card glass-card hidden w-[340px] shrink-0 flex flex-col px-4 py-3.5 select-none transition-all duration-200">
       <!-- Top Row: Tabs (Şimdi Çalıyor | Sözler | Sıradakiler) + Close -->
-      <div class="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
-        <div class="flex items-center gap-3">
-          <button id="tab-drawer-now" onclick="switchDrawerTab('now')" class="text-xs font-bold tracking-wider uppercase text-white border-b-2 border-[#FF0033] pb-1 cursor-pointer">Şimdi Çalıyor</button>
-          <button id="tab-drawer-lyrics" data-i18n="lyrics" onclick="switchDrawerTab('lyrics')" class="text-xs font-bold tracking-wider uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer">Sözler</button>
-          <button id="tab-drawer-queue" data-i18n="upNext" onclick="switchDrawerTab('queue')" class="text-xs font-bold tracking-wider uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer">Sıra</button>
+      <div class="flex items-center justify-between gap-2 mb-3 border-b border-white/10 pb-2">
+        <div class="flex items-center gap-3 min-w-0 whitespace-nowrap">
+          <button id="tab-drawer-now" onclick="switchDrawerTab('now')" class="text-[11px] font-bold tracking-wide uppercase text-white border-b-2 border-[#FF0033] pb-1 cursor-pointer">Şimdi Çalıyor</button>
+          <button id="tab-drawer-lyrics" data-i18n="lyrics" onclick="switchDrawerTab('lyrics')" class="text-[11px] font-bold tracking-wide uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer">Sözler</button>
+          <button id="tab-drawer-queue" data-i18n="upNext" onclick="switchDrawerTab('queue')" class="text-[11px] font-bold tracking-wide uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer">Sıra</button>
         </div>
-        <button onclick="toggleQueue()" title="Paneli gizle" class="text-neutral-400 hover:text-white text-sm cursor-pointer">✕</button>
+        <button onclick="toggleQueue()" title="Paneli gizle" class="shrink-0 text-neutral-400 hover:text-white text-sm cursor-pointer">✕</button>
       </div>
 
       <!-- TAB 1: NOW PLAYING + ARTIST CARD + LYRICS PREVIEW -->
@@ -346,13 +384,13 @@
     </aside>
   </div>
 
-  <!-- FLOATING MATERIAL 3 BOTTOM PLAYER BAR (SimpMusic Signature Capsule Design) -->
-  <footer id="player-bar" class="shrink-0 h-[76px] m3-floating-player px-4 grid grid-cols-3 items-center gap-4 select-none relative z-20">
+  <!-- BOTTOM PLAYER BAR (Docked Full-Width Frosted Glass, Spotify / Modern Desktop Design) -->
+  <footer id="player-bar" class="shrink-0 h-[84px] glass-player px-4 flex items-center justify-between gap-4 select-none relative z-20">
 
     <!-- LEFT: Cover + Title / Clickable Artist + Like Heart -->
-    <div class="flex items-center gap-3.5 min-w-0">
+    <div class="w-[30%] min-w-[200px] max-w-[340px] flex items-center gap-3.5 min-w-0">
       <img id="player-cover" src="" alt="" onclick="switchDrawerTab('now'); if (!state.queueOpen) toggleQueue();" class="w-14 h-14 rounded-lg object-cover bg-neutral-800 border border-white/10 shrink-0 cursor-pointer shadow-md" />
-      <div class="min-w-0">
+      <div class="min-w-0 flex-1">
         <div id="player-title" class="text-[14px] font-semibold text-white truncate">Şarkı seçilmedi</div>
         <div id="player-artist" onclick="openCurrentTrackArtist()" class="text-[12.5px] text-neutral-400 hover:text-white hover:underline truncate cursor-pointer">Dinlemeye başlamak için bir şarkı seç</div>
       </div>
@@ -362,7 +400,7 @@
     </div>
 
     <!-- CENTER: Transport Buttons + Seek Rail with Time Labels -->
-    <div class="flex flex-col items-center justify-center max-w-[600px] w-full mx-auto gap-1.5">
+    <div class="flex-1 max-w-[680px] flex flex-col items-center justify-center gap-1.5 px-4">
       <div class="flex items-center gap-5">
         <!-- Shuffle -->
         <button id="btn-shuffle" onclick="cmdToggleShuffle()" title="Karıştır" class="p-1.5 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer">
@@ -409,11 +447,11 @@
     </div>
 
     <!-- RIGHT: Quality Badge + Lyrics Button + Queue Button + Sleep Timer + Mute + Volume -->
-    <div class="flex items-center justify-end gap-2.5">
+    <div class="w-[30%] min-w-[200px] max-w-[340px] flex items-center justify-end gap-2.5">
       <span id="player-quality" class="text-[10.5px] px-2 py-0.5 rounded bg-white/[0.07] text-neutral-300 hidden xl:inline"></span>
 
       <!-- Now Playing View Toggle Button (Spotify Right Sidebar icon) -->
-      <button onclick="toggleQueue()" title="Şimdi Çalıyor Paneli" class="p-1.5 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer">
+      <button id="btn-toggle-queue" onclick="toggleQueue()" title="Şimdi Çalıyor Paneli" class="p-1.5 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path stroke-linecap="round" d="M15 3v18"/></svg>
       </button>
 
