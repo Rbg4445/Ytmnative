@@ -59,8 +59,7 @@ jobs:
             libdbus-1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf \
-            dpkg-deb
+            patchelf
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

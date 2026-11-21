@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libayatana-appindicator3-dev \
     librsvg2-dev \
     patchelf \
-    dpkg-deb \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
