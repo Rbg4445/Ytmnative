@@ -11,7 +11,7 @@
     <img src="https://img.shields.io/badge/Rust-Pure%20Audio%20Engine-DEA584?style=for-the-badge&logo=rust&logoColor=black" alt="Rust" />
     <img src="https://img.shields.io/badge/Background%20RAM-~12%20MB-10B981?style=for-the-badge" alt="~12 MB RAM" />
     <img src="https://img.shields.io/badge/Auto--Update-5s%20GitHub-6366F1?style=for-the-badge" alt="Auto Update" />
-    <a href="https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3">
+    <a href="https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3/detection">
       <img src="https://img.shields.io/badge/VirusTotal-Verify%20SHA--256-394EFF?style=for-the-badge&logo=virustotal&logoColor=white" alt="VirusTotal" />
     </a>
   </p>
@@ -59,14 +59,14 @@
 ## 🛡️ Security & VirusTotal Verification
 
 <div align="center">
-  <a href="https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3">
+  <a href="https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3/detection">
     <img src="assets/security-poster.svg" alt="Security and VirusTotal Verification" width="100%" />
   </a>
 </div>
 
 | File | Windows Defender | SHA-256 | VirusTotal |
 | :--- | :--- | :--- | :--- |
-| `YTM-Native-Setup-1.0.0.exe` | ✅ 0 Threats | `d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3` | [VirusTotal Report](https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3) |
+| `YTM-Native-Setup-1.0.0.exe` | ✅ 0 Threats | `d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3` | [VirusTotal Report](https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3/detection) |
 | `ytm-native.exe` | ✅ 0 Threats | `35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8` | [VirusTotal Report](https://www.virustotal.com/gui/file/35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8) |
 
 ---
