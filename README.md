@@ -5,7 +5,10 @@
 
   <p>
     <a href="https://github.com/Rbg4445/Ytmnative/releases/latest">
-      <img src="https://img.shields.io/badge/Download-YTM--Native--Setup--1.0.0--beta.exe-FF0033?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows Setup" />
+      <img src="https://img.shields.io/badge/Windows-YTM--Native--Setup--1.0.0--beta.exe-FF0033?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows Setup" />
+    </a>
+    <a href="https://github.com/Rbg4445/Ytmnative/releases/latest">
+      <img src="https://img.shields.io/badge/Linux-.deb%20%26%20.tar.gz-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download Linux Package" />
     </a>
     <img src="https://img.shields.io/badge/Release-v1.0.0--beta-111116?style=for-the-badge&logo=github" alt="v1.0.0-beta" />
     <img src="https://img.shields.io/badge/Rust-Pure%20Audio%20Engine-DEA584?style=for-the-badge&logo=rust&logoColor=black" alt="Rust" />
@@ -73,9 +76,28 @@
 
 ## 📥 Installation
 
-1. Download **`YTM-Native-Setup-1.0.0-beta.exe`** from the **[Releases](https://github.com/Rbg4445/Ytmnative/releases/latest)** page.
+### Windows
+1. Download **`YTM-Native-Setup-1.0.0-beta.exe`** (or portable **`YTM-Native-1.0.0-beta-windows-x64.zip`**) from the **[Releases](https://github.com/Rbg4445/Ytmnative/releases/latest)** page.
 2. Run the installer (no admin/UAC required — installs per-user into `%LOCALAPPDATA%\YTM Native`).
 3. Future updates are checked automatically on startup and installed seamlessly.
+
+### Linux (Debian / Ubuntu / Mint / Arch / Fedora)
+```bash
+# Debian / Ubuntu / Linux Mint (.deb package)
+sudo apt install ./ytm-native_1.0.0-beta_amd64.deb
+
+# Universal Linux Tarball (.tar.gz)
+tar -xzf YTM-Native-1.0.0-beta-linux-x64.tar.gz
+./ytm-native
+```
+
+### Build Linux Package with Docker
+```bash
+docker build -f Dockerfile.linux -t ytm-native-linux .
+docker create --name ytm-linux-extract ytm-native-linux
+docker cp ytm-linux-extract:/out/. ./dist/
+docker rm ytm-linux-extract
+```
 
 ---
 

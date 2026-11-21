@@ -23,8 +23,15 @@ OutputDir=..\dist
 OutputBaseFilename=YTM-Native-Setup-{#MyAppVersion}
 SetupIconFile=..\icons\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
-Compression=lzma
+; Standard ZIP compression avoids LZMA high-entropy heuristic false positives on VirusTotal
+Compression=zip
 SolidCompression=no
+VersionInfoVersion=1.0.0.0
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoDescription=YTM Native — Pure-Rust Desktop Client Installer
+VersionInfoCopyright=Copyright (c) 2026 {#MyAppPublisher} (MIT License)
+VersionInfoProductName={#MyAppName}
+VersionInfoProductVersion={#MyAppVersion}
 WizardStyle=modern
 CloseApplications=force
 RestartApplications=no

@@ -1,0 +1,7 @@
+target/
+dist/
+.git/
+node_modules/
+*.log
+*.old
+*.new

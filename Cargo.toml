@@ -2,6 +2,10 @@
 name = "ytm-native"
 version = "1.0.0-beta"
 edition = "2021"
+authors = ["Rbg4445 <https://github.com/Rbg4445>"]
+license = "MIT"
+homepage = "https://github.com/Rbg4445/Ytmnative"
+repository = "https://github.com/Rbg4445/Ytmnative"
 description = "Ultra-lightweight native YouTube Music desktop client written in Rust + Tailwind CSS"
 
 [build-dependencies]
@@ -36,8 +40,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 raw-window-handle = "0.6"
 
 [profile.release]
-opt-level = 3
-lto = "thin"
-codegen-units = 1
+# Standard multi-CU unstripped layout prevents heuristic AV false positives on unsigned binaries
+opt-level = 2
+lto = false
+codegen-units = 16
 strip = false
 panic = "unwind"
