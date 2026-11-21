@@ -368,19 +368,20 @@ pub fn spawn_background_supervisor(
 
             // Discord Rich Presence & Last.fm Scrobbler (ytmdesktop2 integrations)
             let cur_track = ctrl.queue.lock().ok().and_then(|q| q.current().cloned());
-            let (discord_on, lfm_on, lfm_key, lfm_sec, lfm_sk) = ctrl
+            let (discord_on, discord_cid, lfm_on, lfm_key, lfm_sec, lfm_sk) = ctrl
                 .library
                 .lock()
                 .map(|l| {
                     (
                         l.discord_rpc_enabled,
+                        l.discord_client_id.clone(),
                         l.lastfm_enabled,
                         l.lastfm_api_key.clone(),
                         l.lastfm_secret.clone(),
                         l.lastfm_session_key.clone(),
                     )
                 })
-                .unwrap_or((true, false, String::new(), String::new(), String::new()));
+                .unwrap_or((true, String::new(), false, String::new(), String::new(), String::new()));
 
             let track_ref = cur_track.as_ref().map(|t| {
                 (
@@ -392,6 +393,7 @@ pub fn spawn_background_supervisor(
             });
             discord.update_presence(
                 discord_on,
+                if discord_cid.trim().is_empty() { None } else { Some(discord_cid.trim()) },
                 track_ref,
                 snap.is_playing && !snap.is_paused,
                 snap.position_secs,
@@ -768,6 +770,7 @@ pub async fn get_lyrics(
 pub fn save_integrations(
     ctrl: State<'_, Arc<AppController>>,
     discord_rpc_enabled: bool,
+    discord_client_id: Option<String>,
     obs_api_enabled: bool,
     lastfm_enabled: bool,
     lastfm_api_key: String,
@@ -777,6 +780,9 @@ pub fn save_integrations(
 ) {
     if let Ok(mut lib) = ctrl.library.lock() {
         lib.discord_rpc_enabled = discord_rpc_enabled;
+        if let Some(cid) = discord_client_id {
+            lib.discord_client_id = cid.trim().to_string();
+        }
         lib.obs_api_enabled = obs_api_enabled;
         lib.lastfm_enabled = lastfm_enabled;
         lib.lastfm_api_key = lastfm_api_key.trim().to_string();

@@ -1140,12 +1140,18 @@ function renderMain() {
       </div>
 
       <!-- DISCORD RICH PRESENCE (ytmdesktop2 feature) -->
-      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 flex items-center justify-between gap-4 mb-4">
-        <div>
-          <div class="text-sm font-semibold text-white">🎮 Discord Rich Presence</div>
-          <div class="text-xs text-neutral-400 mt-0.5">Show the currently playing song, artist, album art, and live progress bar on Discord.</div>
+      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 space-y-3 mb-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-semibold text-white">🎮 Discord Rich Presence</div>
+            <div class="text-xs text-neutral-400 mt-0.5">Show the currently playing song, artist, album art, and live progress bar on Discord profile.</div>
+          </div>
+          <input id="chk-discord-rpc" type="checkbox" ${state.library.discord_rpc_enabled !== false ? "checked" : ""} onchange="saveIntegrations()" class="w-4 h-4 accent-(--accent) cursor-pointer" />
         </div>
-        <input id="chk-discord-rpc" type="checkbox" ${state.library.discord_rpc_enabled !== false ? "checked" : ""} onchange="saveIntegrations()" class="w-4 h-4 accent-(--accent) cursor-pointer" />
+        <div class="pt-2 border-t border-white/5 flex items-center gap-3">
+          <label class="text-xs text-neutral-400 shrink-0">Client ID (İsteğe bağlı):</label>
+          <input id="discord-client-id" type="text" placeholder="Varsayılan: 463151177836658699 (YouTube Music)" value="${state.library.discord_client_id || ''}" onchange="saveIntegrations()" class="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1 text-xs text-white placeholder-neutral-500 focus:border-(--accent) outline-none" />
+        </div>
       </div>
 
       <!-- OBS BROWSER SOURCE OVERLAY & STREAM DECK API (ytmdesktop2 feature) -->
@@ -1619,6 +1625,7 @@ async function changeThemePreset(presetCode) {
 
 async function saveIntegrations() {
   const discordEl = document.getElementById("chk-discord-rpc");
+  const discordCidEl = document.getElementById("discord-client-id");
   const obsEl = document.getElementById("chk-obs-api");
   const lfmEl = document.getElementById("chk-lastfm");
   const lfmKeyEl = document.getElementById("lastfm-key");
@@ -1626,6 +1633,7 @@ async function saveIntegrations() {
   const lfmSkEl = document.getElementById("lastfm-sk");
 
   const discordRpcEnabled = discordEl ? discordEl.checked : state.library.discord_rpc_enabled !== false;
+  const discordClientId = discordCidEl ? discordCidEl.value.trim() : (state.library.discord_client_id || "");
   const obsApiEnabled = obsEl ? obsEl.checked : state.library.obs_api_enabled !== false;
   const lastfmEnabled = lfmEl ? lfmEl.checked : !!state.library.lastfm_enabled;
   const lastfmApiKey = lfmKeyEl ? lfmKeyEl.value : state.library.lastfm_api_key || "";
@@ -1635,6 +1643,7 @@ async function saveIntegrations() {
 
   await invoke("save_integrations", {
     discordRpcEnabled,
+    discordClientId,
     obsApiEnabled,
     lastfmEnabled,
     lastfmApiKey,

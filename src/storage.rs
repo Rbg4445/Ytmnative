@@ -41,6 +41,9 @@ pub struct LibraryData {
     /// Discord Rich Presence enabled (ytmdesktop2 feature).
     #[serde(default = "default_true")]
     pub discord_rpc_enabled: bool,
+    /// Custom Discord Application Client ID override (defaults to official YouTube Music App ID).
+    #[serde(default)]
+    pub discord_client_id: String,
     /// OBS Browser Source & Stream Deck Companion API on 127.0.0.1:13091 (ytmdesktop2 feature).
     #[serde(default = "default_true")]
     pub obs_api_enabled: bool,
@@ -85,6 +88,7 @@ impl Default for LibraryData {
             intro_seen: false,
             language: default_language(),
             discord_rpc_enabled: true,
+            discord_client_id: String::new(),
             obs_api_enabled: true,
             lastfm_enabled: false,
             lastfm_api_key: String::new(),

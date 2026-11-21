@@ -6,12 +6,12 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use crate::backend::AppController;
 
 /// Default Discord Application Client ID (YouTube Music Rich Presence)
-pub const DEFAULT_DISCORD_CLIENT_ID: &str = "1163164207358025798";
+pub const DEFAULT_DISCORD_CLIENT_ID: &str = "463151177836658699";
 
 /// Default local HTTP port for OBS Browser Source overlays & Stream Deck API (matches ytmdesktop2)
 pub const OBS_API_PORT: u16 = 13091;
@@ -170,6 +170,7 @@ pub struct DiscordRpcClient {
     #[cfg(unix)]
     sock: Option<std::os::unix::net::UnixStream>,
     last_key: String,
+    active_client_id: String,
 }
 
 impl Default for DiscordRpcClient {
@@ -186,6 +187,7 @@ impl DiscordRpcClient {
             #[cfg(unix)]
             sock: None,
             last_key: String::new(),
+            active_client_id: String::new(),
         }
     }
 
@@ -213,11 +215,15 @@ impl DiscordRpcClient {
         {
             self.sock = None;
         }
+        self.active_client_id.clear();
     }
 
-    fn try_connect(&mut self) -> bool {
+    fn try_connect(&mut self, target_id: &str) -> bool {
         if self.is_connected() {
-            return true;
+            if self.active_client_id == target_id {
+                return true;
+            }
+            self.disconnect();
         }
         #[cfg(windows)]
         {
@@ -227,12 +233,13 @@ impl DiscordRpcClient {
                     self.pipe = Some(file);
                     let handshake = serde_json::json!({
                         "v": 1,
-                        "client_id": DEFAULT_DISCORD_CLIENT_ID
+                        "client_id": target_id
                     })
                     .to_string();
                     if self.send_frame(0, handshake.as_bytes()).is_ok() {
                         let _ = self.read_frame();
-                        debug!("Connected to Discord Rich Presence pipe: {path}");
+                        self.active_client_id = target_id.to_string();
+                        info!("Connected to Discord Rich Presence pipe: {path} with client_id: {target_id}");
                         return true;
                     } else {
                         self.pipe = None;
@@ -253,11 +260,13 @@ impl DiscordRpcClient {
                         self.sock = Some(stream);
                         let handshake = serde_json::json!({
                             "v": 1,
-                            "client_id": DEFAULT_DISCORD_CLIENT_ID
+                            "client_id": target_id
                         })
                         .to_string();
                         if self.send_frame(0, handshake.as_bytes()).is_ok() {
                             let _ = self.read_frame();
+                            self.active_client_id = target_id.to_string();
+                            info!("Connected to Discord Rich Presence socket: {path} with client_id: {target_id}");
                             return true;
                         } else {
                             self.sock = None;
@@ -322,6 +331,7 @@ impl DiscordRpcClient {
     pub fn update_presence(
         &mut self,
         enabled: bool,
+        client_id_override: Option<&str>,
         track: Option<(&str, &str, &str, Option<&str>)>,
         is_playing: bool,
         position_secs: f64,
@@ -335,6 +345,11 @@ impl DiscordRpcClient {
             return;
         }
 
+        let target_id = client_id_override
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .unwrap_or(DEFAULT_DISCORD_CLIENT_ID);
+
         let Some((id, title, artist, thumb)) = track else {
             if !self.last_key.is_empty() {
                 self.clear_activity();
@@ -343,12 +358,12 @@ impl DiscordRpcClient {
             return;
         };
 
-        let key = format!("{id}:{is_playing}:{}", (position_secs as u64) / 15);
+        let key = format!("{target_id}:{id}:{is_playing}:{}", (position_secs as u64) / 15);
         if key == self.last_key {
             return;
         }
 
-        if !self.try_connect() {
+        if !self.try_connect(target_id) {
             return;
         }
 
