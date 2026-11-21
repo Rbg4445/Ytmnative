@@ -1,6 +1,6 @@
 ; YTM Native — Windows Kurulum Sihirbazı (Inno Setup 6)
 #define MyAppName "YTM Native"
-#define MyAppVersion "5.0.0"
+#define MyAppVersion "6.0.0"
 #define MyAppPublisher "Rbg4445"
 #define MyAppURL "https://github.com/Rbg4445/Ytmnative"
 #define MyAppExeName "ytm-native.exe"

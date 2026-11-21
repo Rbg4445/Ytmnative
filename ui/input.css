@@ -1,4 +1,10 @@
-@import "tailwindcss";
+/* Sources are listed explicitly: automatic detection misses the UI files
+   (it scans from the working directory and skips gitignored/untracked paths),
+   which produced a tailwind.css missing most layout classes. */
+@import "tailwindcss" source(none);
+@source "./index.html";
+@source "./app.js";
+@source "./i18n.js";
 
 @layer base {
   html,

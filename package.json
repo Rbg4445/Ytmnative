@@ -1,0 +1,13 @@
+{
+  "name": "ytm-native-ui",
+  "private": true,
+  "description": "Builds ui/tailwind.css. Run `npm run css` after changing classes in ui/index.html, ui/app.js or ui/i18n.js.",
+  "scripts": {
+    "css": "tailwindcss -i ui/input.css -o ui/tailwind.css --minify",
+    "css:watch": "tailwindcss -i ui/input.css -o ui/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.1.17",
+    "tailwindcss": "4.1.17"
+  }
+}
