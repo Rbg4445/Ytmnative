@@ -9,6 +9,10 @@ use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowE
 use tracing::{debug, warn};
 
 use crate::audio::AudioEngine;
+use crate::integrations::{
+    extract_video_id_from_url, fetch_lrclib_lyrics, lastfm_scrobble, lastfm_update_now_playing,
+    spawn_obs_api_server, DiscordRpcClient, LyricLineDto,
+};
 use crate::media::{MediaAction, SystemMedia};
 use crate::model::Track;
 use crate::queue::{PlayQueue, RepeatMode};
@@ -46,6 +50,7 @@ pub struct HomeFeedDto {
 pub struct LyricsDto {
     pub body: String,
     pub footer: String,
+    pub synced: Option<Vec<LyricLineDto>>,
 }
 
 #[derive(Debug, Default)]
@@ -311,8 +316,15 @@ pub fn spawn_background_supervisor(
         warm_ytm.warmup().await;
     });
 
+    // Launch OBS Browser Source & Stream Deck Companion API server on http://127.0.0.1:13091
+    spawn_obs_api_server(Arc::clone(&ctrl));
+
     tauri::async_runtime::spawn(async move {
         let mut last_playing = false;
+        let mut discord = DiscordRpcClient::new();
+        let mut lastfm_now_id = String::new();
+        let mut lastfm_scrobbled_id = String::new();
+
         loop {
             while let Ok(action) = media_rx.try_recv() {
                 match action {
@@ -354,6 +366,75 @@ pub fn spawn_background_supervisor(
                 }
             }
 
+            // Discord Rich Presence & Last.fm Scrobbler (ytmdesktop2 integrations)
+            let cur_track = ctrl.queue.lock().ok().and_then(|q| q.current().cloned());
+            let (discord_on, lfm_on, lfm_key, lfm_sec, lfm_sk) = ctrl
+                .library
+                .lock()
+                .map(|l| {
+                    (
+                        l.discord_rpc_enabled,
+                        l.lastfm_enabled,
+                        l.lastfm_api_key.clone(),
+                        l.lastfm_secret.clone(),
+                        l.lastfm_session_key.clone(),
+                    )
+                })
+                .unwrap_or((true, false, String::new(), String::new(), String::new()));
+
+            let track_ref = cur_track.as_ref().map(|t| {
+                (
+                    t.id.as_str(),
+                    t.title.as_str(),
+                    t.artist.as_str(),
+                    t.thumbnail_url.as_deref(),
+                )
+            });
+            discord.update_presence(
+                discord_on,
+                track_ref,
+                snap.is_playing && !snap.is_paused,
+                snap.position_secs,
+                snap.duration_secs,
+            );
+
+            if lfm_on && snap.is_playing && !snap.is_paused {
+                if let Some(ref t) = cur_track {
+                    if lastfm_now_id != t.id {
+                        lastfm_now_id = t.id.clone();
+                        let http = ctrl.http.clone();
+                        let (k, s, sk, art, tit) = (
+                            lfm_key.clone(),
+                            lfm_sec.clone(),
+                            lfm_sk.clone(),
+                            t.artist.clone(),
+                            t.title.clone(),
+                        );
+                        tauri::async_runtime::spawn(async move {
+                            lastfm_update_now_playing(&http, &k, &s, &sk, &art, &tit).await;
+                        });
+                    }
+                    let threshold = if snap.duration_secs > 20.0 {
+                        (snap.duration_secs * 0.5).min(120.0)
+                    } else {
+                        30.0
+                    };
+                    if snap.position_secs >= threshold && lastfm_scrobbled_id != t.id {
+                        lastfm_scrobbled_id = t.id.clone();
+                        let http = ctrl.http.clone();
+                        let ts = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_secs())
+                            .unwrap_or(0);
+                        let (k, s, sk, art, tit) =
+                            (lfm_key, lfm_sec, lfm_sk, t.artist.clone(), t.title.clone());
+                        tauri::async_runtime::spawn(async move {
+                            lastfm_scrobble(&http, &k, &s, &sk, &art, &tit, ts).await;
+                        });
+                    }
+                }
+            }
+
             let prev_seq = ctrl.last_track_end_seq.load(Ordering::Relaxed);
             if snap.track_end_seq != prev_seq {
                 ctrl.last_track_end_seq
@@ -376,10 +457,21 @@ pub fn open_or_focus_main_window(app: &AppHandle) {
     }
 
     let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-        .title("YouTube Music — Native")
+        .title("YTM Native")
         .inner_size(1240.0, 780.0)
-        .min_inner_size(860.0, 540.0)
-        .background_color(tauri::window::Color(3, 3, 3, 255));
+        .min_inner_size(860.0, 540.0);
+
+    #[cfg(windows)]
+    let builder = builder
+        .transparent(true)
+        .effects(
+            tauri::window::EffectsBuilder::new()
+                .effect(tauri::window::Effect::MicaDark)
+                .build(),
+        );
+
+    #[cfg(not(windows))]
+    let builder = builder.background_color(tauri::window::Color(3, 3, 3, 255));
 
     if let Ok(win) = builder.build() {
         attach_close_to_tray(&win);
@@ -458,7 +550,12 @@ pub async fn search_songs(
     ctrl: State<'_, Arc<AppController>>,
     query: String,
 ) -> Result<Vec<Track>, String> {
-    ctrl.ytm.search_songs(&query).await.map_err(|e| e.to_string())
+    // Support shared links (ytmd://, music.youtube.com/watch?v=..., youtu.be/...) directly!
+    let effective_query = extract_video_id_from_url(&query).unwrap_or(query);
+    ctrl.ytm
+        .search_songs(&effective_query)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -602,12 +699,79 @@ pub fn set_sleep_timer(
 pub async fn get_lyrics(
     ctrl: State<'_, Arc<AppController>>,
     video_id: String,
+    title: Option<String>,
+    artist: Option<String>,
 ) -> Result<Option<LyricsDto>, String> {
+    let t = title.unwrap_or_default();
+    let a = artist.unwrap_or_default();
+
+    // Try LRCLIB time-synced karaoke lyrics first (like ytmdesktop2!)
+    if !t.is_empty() {
+        if let Some((synced, body, footer)) = fetch_lrclib_lyrics(&ctrl.http, &t, &a).await {
+            return Ok(Some(LyricsDto {
+                body,
+                footer,
+                synced,
+            }));
+        }
+    }
+
     ctrl.ytm
         .fetch_lyrics(&video_id)
         .await
-        .map(|opt| opt.map(|(body, footer)| LyricsDto { body, footer }))
+        .map(|opt| {
+            opt.map(|(body, footer)| LyricsDto {
+                body,
+                footer,
+                synced: None,
+            })
+        })
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn save_integrations(
+    ctrl: State<'_, Arc<AppController>>,
+    discord_rpc_enabled: bool,
+    obs_api_enabled: bool,
+    lastfm_enabled: bool,
+    lastfm_api_key: String,
+    lastfm_secret: String,
+    lastfm_session_key: String,
+    theme_preset: String,
+) {
+    if let Ok(mut lib) = ctrl.library.lock() {
+        lib.discord_rpc_enabled = discord_rpc_enabled;
+        lib.obs_api_enabled = obs_api_enabled;
+        lib.lastfm_enabled = lastfm_enabled;
+        lib.lastfm_api_key = lastfm_api_key.trim().to_string();
+        lib.lastfm_secret = lastfm_secret.trim().to_string();
+        lib.lastfm_session_key = lastfm_session_key.trim().to_string();
+        lib.theme_preset = theme_preset.trim().to_string();
+        lib.save();
+    }
+}
+
+#[tauri::command]
+pub fn set_mini_player(app: AppHandle, enabled: bool) {
+    if let Some(win) = app.get_webview_window("main") {
+        if enabled {
+            let _ = win.set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(340.0, 440.0))));
+            let _ = win.set_size(tauri::Size::Logical(tauri::LogicalSize::new(380.0, 500.0)));
+            let _ = win.set_always_on_top(true);
+        } else {
+            let _ = win.set_always_on_top(false);
+            let _ = win.set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(860.0, 540.0))));
+            let _ = win.set_size(tauri::Size::Logical(tauri::LogicalSize::new(1240.0, 780.0)));
+        }
+    }
+}
+
+#[tauri::command]
+pub fn set_always_on_top(app: AppHandle, enabled: bool) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.set_always_on_top(enabled);
+    }
 }
 
 #[tauri::command]

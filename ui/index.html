@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>YTM Native</title>
   <link rel="stylesheet" href="tailwind.css" />
+  <style id="theme-preset-css"></style>
   <style id="user-custom-css"></style>
 </head>
-<body class="bg-[#030303] text-white h-screen w-screen flex flex-col overflow-hidden relative">
+<body class="bg-transparent text-white h-screen w-screen flex flex-col overflow-hidden relative">
 
   <!-- ON-DEMAND / FIRST-LAUNCH INTRO VIDEO OVERLAY (0 bytes RAM when not active!) -->
   <div id="app-splash" class="hidden fixed inset-0 z-50 bg-black flex items-center justify-center transition-all duration-500 overflow-hidden opacity-0">
@@ -42,12 +43,36 @@
     <span id="update-check-toast-text" data-i18n="checkingUpdate">Checking for updates...</span>
   </div>
 
-  <!-- DYNAMIC AMBIENT GLASS BACKDROP (shifts color smoothly with active album cover!) -->
-  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#030303]">
-    <div class="absolute -top-32 -left-24 w-[520px] h-[520px] rounded-full bg-[#FF0033]/[0.14] blur-[130px]"></div>
-    <div class="absolute bottom-0 right-0 w-[460px] h-[460px] rounded-full bg-[#8b0a28]/[0.12] blur-[140px]"></div>
-    <img id="ambient-bg-img" src="" alt="" class="hidden w-full h-full object-cover scale-125 blur-[110px] opacity-[0.22] saturate-150 transition-opacity duration-700" />
-    <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/75 to-[#030303]/95"></div>
+  <!-- COMPACT MINI PLAYER OVERLAY (active when Mini Player mode is toggled!) -->
+  <div id="mini-player-overlay" class="hidden fixed inset-0 z-40 bg-[#07070b]/95 backdrop-blur-2xl flex flex-col justify-between p-5 select-none">
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-bold uppercase tracking-wider text-[#FF0033]">YTM Native • Mini</span>
+      <button onclick="toggleMiniPlayer()" title="Restore Full Window" class="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium text-white cursor-pointer">⤢ Expand</button>
+    </div>
+    <div class="flex flex-col items-center text-center my-auto px-2">
+      <img id="mini-cover" src="" alt="" class="w-48 h-48 rounded-2xl object-cover shadow-2xl border border-white/15 bg-neutral-900 mb-4" />
+      <div id="mini-title" class="text-base font-bold text-white line-clamp-1">No track playing</div>
+      <div id="mini-artist" class="text-xs text-neutral-400 mt-0.5 line-clamp-1"></div>
+      <div id="mini-lyric-line" class="text-xs font-medium text-[#FF4D6D] mt-3 min-h-[1.25rem] line-clamp-2"></div>
+    </div>
+    <div class="space-y-3">
+      <div class="w-full h-1.5 rounded-full bg-white/15 overflow-hidden">
+        <div id="mini-seek-fill" class="h-full bg-[#FF0033] w-0"></div>
+      </div>
+      <div class="flex items-center justify-center gap-6">
+        <button onclick="cmdPrev()" class="text-white/80 hover:text-white cursor-pointer"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+        <button onclick="cmdTogglePause()" class="w-12 h-12 rounded-full bg-[#FF0033] hover:bg-[#e0002d] flex items-center justify-center text-white shadow-lg cursor-pointer"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+        <button onclick="cmdNext()" class="text-white/80 hover:text-white cursor-pointer"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DYNAMIC AMBIENT GLASS BACKDROP (transparent on Windows 11 so OS MicaDark blur shines through!) -->
+  <div id="ambient-backdrop-root" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-transparent">
+    <div class="absolute -top-32 -left-24 w-[520px] h-[520px] rounded-full bg-[#FF0033]/[0.16] blur-[130px]"></div>
+    <div class="absolute bottom-0 right-0 w-[460px] h-[460px] rounded-full bg-[#8b0a28]/[0.14] blur-[140px]"></div>
+    <img id="ambient-bg-img" src="" alt="" class="hidden w-full h-full object-cover scale-125 blur-[110px] opacity-[0.26] saturate-150 transition-opacity duration-700" />
+    <div class="absolute inset-0 bg-gradient-to-b from-black/20 via-black/45 to-black/70"></div>
   </div>
 
   <!-- MAIN SHELL: SIDEBAR + CONTENT + QUEUE -->
@@ -133,8 +158,8 @@
           <div id="search-suggestions" class="hidden absolute left-0 right-0 top-12 rounded-xl bg-[#121216]/95 backdrop-blur-2xl border border-white/15 shadow-[0_18px_50px_rgba(0,0,0,0.8)] py-1.5 overflow-hidden z-50"></div>
         </div>
 
-        <!-- Right Header Controls: Refresh + Queue Toggle + Account Avatar -->
-        <div class="flex items-center gap-2.5">
+        <!-- Right Header Controls: Refresh + Queue Toggle + Pin + Mini Player + Account Avatar -->
+        <div class="flex items-center gap-2">
           <button id="btn-header-refresh" onclick="refreshHome(true)" title="Refresh recommendations (F5)" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] backdrop-blur-md border border-white/[0.10] text-xs font-medium text-neutral-200 transition cursor-pointer">
             <svg id="icon-header-refresh" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-2.64-6.36L21 8m0-5v5h-5"/></svg>
             <span data-i18n="refresh">Refresh</span>
@@ -143,6 +168,8 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h10M4 18h10M18 12v6l4-3-4-3Z"/></svg>
             <span data-i18n="queueLyrics">Queue / Lyrics</span>
           </button>
+          <button id="btn-pin-top" onclick="toggleAlwaysOnTop()" title="Always on Top" class="w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.10] flex items-center justify-center text-xs text-neutral-300 hover:text-white transition cursor-pointer">📌</button>
+          <button id="btn-mini-player" onclick="toggleMiniPlayer()" title="Mini Player (Ctrl+M)" class="w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.10] flex items-center justify-center text-xs text-neutral-300 hover:text-white transition cursor-pointer">⧉</button>
           <button id="btn-account-avatar" onclick="navigate('account')" title="Account & Settings" class="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/20 hover:ring-2 hover:ring-white/40 flex items-center justify-center text-xs font-bold text-white transition cursor-pointer">
           </button>
         </div>

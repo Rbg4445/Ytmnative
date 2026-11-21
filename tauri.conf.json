@@ -11,13 +11,16 @@
     "windows": [
       {
         "label": "main",
-        "title": "YouTube Music — Native",
+        "title": "YTM Native",
         "width": 1240,
         "height": 780,
         "minWidth": 860,
         "minHeight": 540,
-        "backgroundColor": "#030303",
-        "decorations": true
+        "transparent": true,
+        "decorations": true,
+        "windowEffects": {
+          "effects": ["micaDark"]
+        }
       }
     ],
     "security": {

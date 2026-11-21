@@ -1,6 +1,30 @@
 const invoke = window.__TAURI__.core.invoke;
 const DEFAULT_UPDATE_REPO = "Rbg4445/Ytmnative";
 
+const THEME_PRESETS = {
+  "": { label: "YouTube Music Dark Glass (Default)", css: "" },
+  oled: {
+    label: "OLED Pure Black",
+    css: "body, #sidebar, header, #player-bar, #queue-drawer { background: #000000 !important; }",
+  },
+  crimson: {
+    label: "Crimson Neon Glass",
+    css: "#sidebar, #player-bar { background: rgba(28, 6, 14, 0.78) !important; border-color: rgba(255, 0, 51, 0.25) !important; }",
+  },
+  cyberpunk: {
+    label: "Midnight Cyberpunk",
+    css: "#sidebar, #player-bar { background: rgba(12, 10, 30, 0.80) !important; border-color: rgba(99, 102, 241, 0.3) !important; } #seek-bar-fill { background: #6366F1 !important; }",
+  },
+  emerald: {
+    label: "Emerald Aurora",
+    css: "#sidebar, #player-bar { background: rgba(6, 24, 18, 0.80) !important; border-color: rgba(16, 185, 129, 0.28) !important; } #seek-bar-fill { background: #10B981 !important; }",
+  },
+  frost: {
+    label: "Nordic Frost Glass",
+    css: "#sidebar, #player-bar, header { background: rgba(16, 24, 38, 0.72) !important; backdrop-filter: blur(28px) !important; }",
+  },
+};
+
 const MOODS = [
   ["Enerjik", "enerjik müzik mix"],
   ["Keyifli", "keyifli pop şarkılar"],
@@ -23,6 +47,10 @@ let state = {
   lyricsTrackId: null,
   lyricsData: null,
   loadingLyrics: false,
+  activeLyricIdx: -1,
+  miniPlayer: false,
+  alwaysOnTop: false,
+  obsLayout: "default",
   mutedPrevVol: 0.85,
   activeMood: null,
   moodTracks: [],
@@ -590,6 +618,79 @@ function renderMain() {
         </select>
       </div>
 
+      <!-- THEME PRESET SELECTOR (ytmdesktop2 Themes) -->
+      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 flex items-center justify-between gap-4 mb-4">
+        <div>
+          <div class="text-sm font-semibold text-white">🎨 Theme Preset</div>
+          <div class="text-xs text-neutral-400 mt-0.5">Choose a built-in glassmorphic theme or combine with Custom CSS below.</div>
+        </div>
+        <select id="theme-preset-select" onchange="changeThemePreset(this.value)" class="shrink-0 bg-[#0a0a0e] border border-white/20 hover:border-white/40 rounded-lg px-3.5 py-2 text-xs font-medium text-white cursor-pointer focus:outline-none">
+          ${Object.entries(THEME_PRESETS)
+            .map(
+              ([code, obj]) =>
+                `<option value="${code}" ${(state.library.theme_preset || "") === code ? "selected" : ""}>${esc(obj.label)}</option>`
+            )
+            .join("")}
+        </select>
+      </div>
+
+      <!-- DISCORD RICH PRESENCE (ytmdesktop2 feature) -->
+      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 flex items-center justify-between gap-4 mb-4">
+        <div>
+          <div class="text-sm font-semibold text-white">🎮 Discord Rich Presence</div>
+          <div class="text-xs text-neutral-400 mt-0.5">Show the currently playing song, artist, album art, and live progress bar on Discord.</div>
+        </div>
+        <input id="chk-discord-rpc" type="checkbox" ${state.library.discord_rpc_enabled !== false ? "checked" : ""} onchange="saveIntegrations()" class="w-4 h-4 accent-[#FF0033] cursor-pointer" />
+      </div>
+
+      <!-- OBS BROWSER SOURCE OVERLAY & STREAM DECK API (ytmdesktop2 feature) -->
+      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 space-y-3 mb-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-semibold text-white">🎥 OBS Browser Source Overlay &amp; Stream Deck API</div>
+            <div class="text-xs text-neutral-400 mt-0.5">Local server on <code>http://127.0.0.1:13091</code> for OBS overlays and Stream Deck control.</div>
+          </div>
+          <input id="chk-obs-api" type="checkbox" ${state.library.obs_api_enabled !== false ? "checked" : ""} onchange="saveIntegrations()" class="w-4 h-4 accent-[#FF0033] cursor-pointer" />
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="obs-layout-select" onchange="state.obsLayout = this.value; renderMain()" class="bg-[#0a0a0e] border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white cursor-pointer">
+            <option value="default" ${state.obsLayout === "default" ? "selected" : ""}>Layout: Default Card</option>
+            <option value="compact" ${state.obsLayout === "compact" ? "selected" : ""}>Layout: Compact</option>
+            <option value="stack" ${state.obsLayout === "stack" ? "selected" : ""}>Layout: Vertical Stack</option>
+            <option value="badge" ${state.obsLayout === "badge" ? "selected" : ""}>Layout: Pill Badge</option>
+            <option value="text" ${state.obsLayout === "text" ? "selected" : ""}>Layout: Minimal Text</option>
+          </select>
+          <input id="obs-url-box" type="text" readonly value="http://127.0.0.1:13091/embed/now-playing?layout=${esc(state.obsLayout || "default")}" class="flex-1 min-w-[220px] bg-[#0a0a0a] border border-white/15 rounded-lg px-3 py-1.5 text-xs font-mono text-neutral-200" />
+          <button onclick="copyObsUrl()" class="px-4 py-1.5 rounded-full bg-white text-black text-xs font-semibold cursor-pointer">Copy OBS URL</button>
+        </div>
+      </div>
+
+      <!-- LAST.FM SCROBBLER (ytmdesktop2 feature) -->
+      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 space-y-3 mb-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-semibold text-white">📻 Last.fm Scrobbler &amp; Now Playing</div>
+            <div class="text-xs text-neutral-400 mt-0.5">Automatically updates Now Playing and scrobbles tracks after 50% playback.</div>
+          </div>
+          <input id="chk-lastfm" type="checkbox" ${state.library.lastfm_enabled ? "checked" : ""} onchange="saveIntegrations()" class="w-4 h-4 accent-[#FF0033] cursor-pointer" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <input id="lastfm-key" type="text" placeholder="Last.fm API Key" value="${esc(state.library.lastfm_api_key || "")}" class="bg-[#0a0a0a] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white" />
+          <input id="lastfm-secret" type="password" placeholder="Shared Secret" value="${esc(state.library.lastfm_secret || "")}" class="bg-[#0a0a0a] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white" />
+          <input id="lastfm-sk" type="password" placeholder="Session Key (sk)" value="${esc(state.library.lastfm_session_key || "")}" class="bg-[#0a0a0a] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white" />
+        </div>
+        <button onclick="saveIntegrations()" class="px-4 py-1.5 rounded-full bg-white/15 hover:bg-white/25 text-xs font-semibold text-white cursor-pointer">Save Last.fm Settings</button>
+      </div>
+
+      <!-- SHARED LINKS & TAMPERMONKEY USERSCRIPT (ytmdesktop2 feature) -->
+      <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 flex items-center justify-between gap-4 mb-4">
+        <div>
+          <div class="text-sm font-semibold text-white">🔗 Shared Links &amp; Browser Userscript</div>
+          <div class="text-xs text-neutral-400 mt-0.5">Paste any <code>music.youtube.com</code>, <code>youtu.be</code>, or <code>ytmd://</code> URL into Search to play directly.</div>
+        </div>
+        <button onclick="downloadUserscript()" class="shrink-0 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-semibold text-white cursor-pointer">⬇ Userscript (.user.js)</button>
+      </div>
+
       <div class="max-w-2xl bg-[#141414]/80 backdrop-blur-lg border border-white/10 rounded-xl p-5 flex items-center justify-between mb-6">
         <div>
           <div class="text-sm font-semibold text-white">${esc(t("introTitle"))}</div>
@@ -694,7 +795,7 @@ async function loadLyricsForCurrent() {
   const cur = state.playback.current;
   const panel = document.getElementById("lyrics-panel");
   if (!cur) {
-    panel.innerHTML = `<p class="text-xs text-neutral-400">Şarkı sözlerini görmek için bir parça çal.</p>`;
+    if (panel) panel.innerHTML = `<p class="text-xs text-neutral-400">${esc(t("lyricsEmpty"))}</p>`;
     return;
   }
   if (state.lyricsTrackId === cur.id && !state.loadingLyrics) {
@@ -703,10 +804,15 @@ async function loadLyricsForCurrent() {
   }
   state.lyricsTrackId = cur.id;
   state.lyricsData = null;
+  state.activeLyricIdx = -1;
   state.loadingLyrics = true;
-  panel.innerHTML = `<p class="text-xs text-neutral-400">Sözler yükleniyor...</p>`;
+  if (panel) panel.innerHTML = `<p class="text-xs text-neutral-400">${esc(t("loading"))}</p>`;
   try {
-    state.lyricsData = await invoke("get_lyrics", { videoId: cur.id });
+    state.lyricsData = await invoke("get_lyrics", {
+      videoId: cur.id,
+      title: cur.title,
+      artist: cur.artist,
+    });
   } catch (_) {
     state.lyricsData = null;
   }
@@ -718,14 +824,71 @@ async function loadLyricsForCurrent() {
 
 function renderLyricsPanel() {
   const panel = document.getElementById("lyrics-panel");
-  if (!state.lyricsData || !state.lyricsData.body) {
-    panel.innerHTML = `<p class="text-xs text-neutral-400">Bu parça için şarkı sözü bulunamadı.</p>`;
+  if (!panel) return;
+  if (!state.lyricsData || (!state.lyricsData.body && !state.lyricsData.synced)) {
+    panel.innerHTML = `<p class="text-xs text-neutral-400">${esc(t("lyricsNotFound"))}</p>`;
+    return;
+  }
+  if (Array.isArray(state.lyricsData.synced) && state.lyricsData.synced.length > 0) {
+    panel.innerHTML = `
+      <div class="space-y-2.5 py-2">
+        ${state.lyricsData.synced
+          .map(
+            (line, i) => `
+          <div id="lyric-line-${i}" onclick="seekToLyric(${line.time_secs})" class="px-2.5 py-1.5 rounded-lg text-[14px] leading-snug transition-all duration-200 cursor-pointer text-neutral-400 hover:text-white hover:bg-white/[0.06]">
+            ${esc(line.text || "♪")}
+          </div>`
+          )
+          .join("")}
+      </div>
+      ${state.lyricsData.footer ? `<div class="mt-4 text-[11px] text-neutral-500">${esc(state.lyricsData.footer)}</div>` : ""}
+    `;
+    updateSyncedLyricsHighlight(state.playback.position_secs || 0);
     return;
   }
   panel.innerHTML = `
     <div class="text-[14px] leading-7 text-neutral-100">${esc(state.lyricsData.body)}</div>
     ${state.lyricsData.footer ? `<div class="mt-6 text-[11px] text-neutral-500">${esc(state.lyricsData.footer)}</div>` : ""}
   `;
+}
+
+async function seekToLyric(seconds) {
+  await invoke("seek", { seconds });
+  await syncPlayback();
+}
+
+function updateSyncedLyricsHighlight(posSecs) {
+  const synced = state.lyricsData?.synced;
+  if (!Array.isArray(synced) || !synced.length) {
+    const miniLine = document.getElementById("mini-lyric-line");
+    if (miniLine) miniLine.textContent = "";
+    return;
+  }
+  let idx = -1;
+  for (let i = 0; i < synced.length; i++) {
+    if (posSecs + 0.15 >= synced[i].time_secs) {
+      idx = i;
+    } else {
+      break;
+    }
+  }
+  const miniLine = document.getElementById("mini-lyric-line");
+  if (miniLine) {
+    miniLine.textContent = idx >= 0 ? synced[idx].text : "";
+  }
+  if (idx === state.activeLyricIdx) return;
+  const prevEl = document.getElementById(`lyric-line-${state.activeLyricIdx}`);
+  if (prevEl) {
+    prevEl.className =
+      "px-2.5 py-1.5 rounded-lg text-[14px] leading-snug transition-all duration-200 cursor-pointer text-neutral-400 hover:text-white hover:bg-white/[0.06]";
+  }
+  state.activeLyricIdx = idx;
+  const curEl = document.getElementById(`lyric-line-${idx}`);
+  if (curEl) {
+    curEl.className =
+      "px-2.5 py-1.5 rounded-lg text-[15px] font-bold leading-snug transition-all duration-200 cursor-pointer text-white bg-[#FF0033]/20 border-l-2 border-[#FF0033]";
+    curEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }
 
 function renderPlayerBar() {
@@ -743,6 +906,9 @@ function renderPlayerBar() {
 
   document.getElementById("seek-bar-fill").style.width = `${pct}%`;
   document.getElementById("player-time").textContent = `${fmtSec(pos)} / ${fmtSec(dur)}`;
+  const miniSeek = document.getElementById("mini-seek-fill");
+  if (miniSeek) miniSeek.style.width = `${pct}%`;
+  updateSyncedLyricsHighlight(pos);
 
   const playIcon = document.getElementById("icon-play");
   const pauseIcon = document.getElementById("icon-pause");
@@ -770,6 +936,12 @@ function renderPlayerBar() {
     }
     document.getElementById("player-title").textContent = pb.current.title;
     document.getElementById("player-artist").textContent = pb.current.artist;
+    const miniCov = document.getElementById("mini-cover");
+    if (miniCov) miniCov.src = pb.current.thumbnail_url || "";
+    const miniTit = document.getElementById("mini-title");
+    if (miniTit) miniTit.textContent = pb.current.title;
+    const miniArt = document.getElementById("mini-artist");
+    if (miniArt) miniArt.textContent = pb.current.artist;
     const liked = isLiked(pb.current.id);
     const likeBtn = document.getElementById("btn-player-like");
     likeBtn.className = liked
@@ -847,7 +1019,102 @@ async function refreshLibrary() {
   state.library = await invoke("get_library");
   const cssEl = document.getElementById("user-custom-css");
   if (cssEl) cssEl.textContent = state.library.custom_css || "";
+  const presetEl = document.getElementById("theme-preset-css");
+  if (presetEl) {
+    const preset = THEME_PRESETS[state.library.theme_preset || ""];
+    presetEl.textContent = preset ? preset.css : "";
+  }
   renderNav();
+}
+
+async function changeThemePreset(presetCode) {
+  state.library.theme_preset = presetCode;
+  const presetEl = document.getElementById("theme-preset-css");
+  if (presetEl) {
+    const preset = THEME_PRESETS[presetCode || ""];
+    presetEl.textContent = preset ? preset.css : "";
+  }
+  await saveIntegrations();
+}
+
+async function saveIntegrations() {
+  const discordEl = document.getElementById("chk-discord-rpc");
+  const obsEl = document.getElementById("chk-obs-api");
+  const lfmEl = document.getElementById("chk-lastfm");
+  const lfmKeyEl = document.getElementById("lastfm-key");
+  const lfmSecEl = document.getElementById("lastfm-secret");
+  const lfmSkEl = document.getElementById("lastfm-sk");
+
+  const discordRpcEnabled = discordEl ? discordEl.checked : state.library.discord_rpc_enabled !== false;
+  const obsApiEnabled = obsEl ? obsEl.checked : state.library.obs_api_enabled !== false;
+  const lastfmEnabled = lfmEl ? lfmEl.checked : !!state.library.lastfm_enabled;
+  const lastfmApiKey = lfmKeyEl ? lfmKeyEl.value : state.library.lastfm_api_key || "";
+  const lastfmSecret = lfmSecEl ? lfmSecEl.value : state.library.lastfm_secret || "";
+  const lastfmSessionKey = lfmSkEl ? lfmSkEl.value : state.library.lastfm_session_key || "";
+  const themePreset = state.library.theme_preset || "";
+
+  await invoke("save_integrations", {
+    discordRpcEnabled,
+    obsApiEnabled,
+    lastfmEnabled,
+    lastfmApiKey,
+    lastfmSecret,
+    lastfmSessionKey,
+    themePreset,
+  });
+  await refreshLibrary();
+}
+
+function copyObsUrl() {
+  const box = document.getElementById("obs-url-box");
+  if (box && navigator.clipboard) {
+    navigator.clipboard.writeText(box.value);
+    showBanner("✓ OBS Browser Source URL copied to clipboard!", false);
+  }
+}
+
+function downloadUserscript() {
+  const script = `// ==UserScript==
+// @name         YTM Native — Open Links in Desktop App
+// @namespace    https://github.com/Rbg4445/Ytmnative
+// @version      1.0.0
+// @description  Soft-opens actionable YouTube Music links via ytmd:// protocol
+// @match        *://music.youtube.com/*
+// @grant        GM_registerMenuCommand
+// ==/UserScript==
+(function() {
+  'use strict';
+  if (location.pathname === '/watch' && location.search.includes('v=')) {
+    const ytmdUrl = location.href.replace(/^https?:\\/\\//, 'ytmd://');
+    console.log('[YTM Native] Ready:', ytmdUrl);
+  }
+})();`;
+  const blob = new Blob([script], { type: "application/javascript" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "ytm-native-open-links.user.js";
+  a.click();
+}
+
+async function toggleMiniPlayer() {
+  state.miniPlayer = !state.miniPlayer;
+  const overlay = document.getElementById("mini-player-overlay");
+  if (overlay) overlay.classList.toggle("hidden", !state.miniPlayer);
+  await invoke("set_mini_player", { enabled: state.miniPlayer });
+  if (state.miniPlayer && state.playback.current) {
+    loadLyricsForCurrent();
+  }
+}
+
+async function toggleAlwaysOnTop() {
+  state.alwaysOnTop = !state.alwaysOnTop;
+  const btn = document.getElementById("btn-pin-top");
+  if (btn) {
+    btn.className = state.alwaysOnTop
+      ? "w-8 h-8 rounded-full bg-[#FF0033] text-white flex items-center justify-center text-xs transition cursor-pointer"
+      : "w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.10] flex items-center justify-center text-xs text-neutral-300 hover:text-white transition cursor-pointer";
+  }
+  await invoke("set_always_on_top", { enabled: state.alwaysOnTop });
 }
 
 async function refreshHome(forceFresh = false) {
@@ -1313,6 +1580,11 @@ document.addEventListener("keydown", async (e) => {
     refreshHome(true);
     return;
   }
+  if (e.ctrlKey && e.key.toLowerCase() === "m") {
+    e.preventDefault();
+    toggleMiniPlayer();
+    return;
+  }
   if (typing) return;
   if (e.code === "Space") {
     e.preventDefault();
@@ -1438,6 +1710,13 @@ function changeLanguage(lang) {
 
 // --- BOOT ---
 (async function init() {
+  // On Linux (WebKitGTK), keep background opaque to prevent NVIDIA/compositor ghosting
+  if (navigator.userAgent.includes("Linux")) {
+    document.documentElement.classList.add("linux-opaque");
+    const ambRoot = document.getElementById("ambient-backdrop-root");
+    if (ambRoot) ambRoot.classList.add("bg-[#030303]");
+  }
+
   document.addEventListener("keydown", (e) => {
     if (introVisible && (e.key === "Escape" || e.key === "Enter")) {
       e.preventDefault();

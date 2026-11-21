@@ -34,6 +34,24 @@ pub struct LibraryData {
     /// UI language code (defaults to English "en").
     #[serde(default = "default_language")]
     pub language: String,
+    /// Discord Rich Presence enabled (ytmdesktop2 feature).
+    #[serde(default = "default_true")]
+    pub discord_rpc_enabled: bool,
+    /// OBS Browser Source & Stream Deck Companion API on 127.0.0.1:13091 (ytmdesktop2 feature).
+    #[serde(default = "default_true")]
+    pub obs_api_enabled: bool,
+    /// Last.fm scrobbling enabled (ytmdesktop2 feature).
+    #[serde(default)]
+    pub lastfm_enabled: bool,
+    #[serde(default)]
+    pub lastfm_api_key: String,
+    #[serde(default)]
+    pub lastfm_secret: String,
+    #[serde(default)]
+    pub lastfm_session_key: String,
+    /// Active built-in theme preset name (ytmdesktop2 feature).
+    #[serde(default)]
+    pub theme_preset: String,
 }
 
 fn default_volume() -> f32 {
@@ -42,6 +60,10 @@ fn default_volume() -> f32 {
 
 fn default_language() -> String {
     "en".to_string()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for LibraryData {
@@ -56,6 +78,13 @@ impl Default for LibraryData {
             custom_css: String::new(),
             intro_seen: false,
             language: default_language(),
+            discord_rpc_enabled: true,
+            obs_api_enabled: true,
+            lastfm_enabled: false,
+            lastfm_api_key: String::new(),
+            lastfm_secret: String::new(),
+            lastfm_session_key: String::new(),
+            theme_preset: String::new(),
         }
     }
 }

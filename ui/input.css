@@ -3,12 +3,16 @@
 @layer base {
   html,
   body {
-    background-color: #030303;
+    background-color: transparent;
     color: #ffffff;
     font-family: "Roboto", "Segoe UI", system-ui, -apple-system, sans-serif;
     overflow: hidden;
     user-select: none;
     -webkit-font-smoothing: antialiased;
+  }
+  html.linux-opaque,
+  html.linux-opaque body {
+    background-color: #030303 !important;
   }
 }
 

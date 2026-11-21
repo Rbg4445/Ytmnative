@@ -1,5 +1,6 @@
 pub mod audio;
 pub mod backend;
+pub mod integrations;
 pub mod media;
 pub mod model;
 pub mod queue;

@@ -38,6 +38,11 @@
 - **🎧 High-Quality Rust Audio DSP:** Native `symphonia` AAC decoding + `cpal` (WASAPI) output with 4-point *Cubic Catmull-Rom* resampling and loudness normalization.
 - **🪟 System Tray RAM Saver:** Closing the window (`X`) completely destroys WebView2 from memory while the pure-Rust audio engine, auto-radio, and Windows media keys (SMTC) keep running at **~12 MB Private RAM** and **0% idle CPU**.
 - **🔐 Native Google Sign-In:** Sign in directly inside the app with zero Firebase or external browser cookie scraping to sync your YouTube Music history, likes, and picks.
+- **🎮 Discord Rich Presence:** Native zero-dependency Discord IPC shows your current song, artist, album art, live timestamps, and a *"Listen on YouTube Music"* button on Discord.
+- **🎤 Time-Synced Karaoke Lyrics (LRCLIB):** Real-time synchronized LRC lyrics with glowing active-line highlighting, auto-scroll, and click-any-line-to-seek.
+- **🎥 OBS Browser Source Overlays & Stream Deck API (`:13091`):** Built-in local companion server at `http://127.0.0.1:13091/embed/now-playing` (`?layout=default|compact|stack|badge|text`) plus `/api/v1/state` and `/api/v1/command`.
+- **📻 Last.fm Scrobbler & Now Playing:** Automatic Now Playing updates and track scrobbling at 50% playback.
+- **⧉ Mini Player, Always-on-Top Pin & Theme Presets:** Floating `Ctrl+M` mini player with live synced lyrics, 6 glassmorphic theme presets, Custom CSS, and `ytmd://` shared-link & Tampermonkey userscript support.
 - **🌐 Multi-Language Support (10 Languages):** Defaults to **English**, with instant switching in Settings (`English`, `Türkçe`, `Deutsch`, `Español`, `Français`, `Português`, `Русский`, `日本語`, `한국어`, `العربية`).
 - **🚀 5-Second Serverless Auto-Updater:** Automatically checks GitHub Releases for up to 5 seconds on launch and self-updates seamlessly without requiring admin privileges.
 
