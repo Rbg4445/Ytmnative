@@ -27,8 +27,9 @@ jobs:
       - name: Build Windows Setup installer & Portable ZIP
         shell: powershell
         run: |
+          $ver = "${{ github.ref_name }}".TrimStart("v")
           iscc installer/ytm-native.iss
-          Compress-Archive -Path target/release/ytm-native.exe, LICENSE, README.md -DestinationPath dist/YTM-Native-4.0.0-windows-x64.zip -Force
+          Compress-Archive -Path target/release/ytm-native.exe, LICENSE, README.md -DestinationPath "dist/YTM-Native-$ver-windows-x64.zip" -Force
 
       - name: Publish Windows Assets to GitHub Release
         uses: softprops/action-gh-release@v2
@@ -71,7 +72,8 @@ jobs:
         run: |
           cargo build --release
           mkdir -p dist
-          PKG_ROOT="/tmp/ytm-native_4.0.0_amd64"
+          VER="${GITHUB_REF_NAME#v}"
+          PKG_ROOT="/tmp/ytm-native_${VER}_amd64"
           mkdir -p "$PKG_ROOT/DEBIAN" \
                    "$PKG_ROOT/usr/bin" \
                    "$PKG_ROOT/usr/share/applications" \
@@ -80,9 +82,9 @@ jobs:
           chmod 755 "$PKG_ROOT/usr/bin/ytm-native"
           cp icons/icon.png "$PKG_ROOT/usr/share/icons/hicolor/256x256/apps/ytm-native.png"
           printf "[Desktop Entry]\nName=YTM Native\nComment=Ultra-lightweight pure-Rust YouTube Music desktop client\nExec=/usr/bin/ytm-native\nIcon=ytm-native\nTerminal=false\nType=Application\nCategories=AudioVideo;Audio;Player;Music;\n" > "$PKG_ROOT/usr/share/applications/ytm-native.desktop"
-          printf "Package: ytm-native\nVersion: 4.0.0\nSection: sound\nPriority: optional\nArchitecture: amd64\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0, libasound2t64 | libasound2, libdbus-1-3, libayatana-appindicator3-1\nMaintainer: Rbg4445 <https://github.com/Rbg4445/Ytmnative>\nDescription: Ultra-lightweight pure-Rust YouTube Music desktop client\n" > "$PKG_ROOT/DEBIAN/control"
-          dpkg-deb --build --root-owner-group "$PKG_ROOT" dist/ytm-native_4.0.0_amd64.deb
-          tar -czf dist/YTM-Native-4.0.0-linux-x64.tar.gz -C target/release ytm-native
+          printf "Package: ytm-native\nVersion: ${VER}\nSection: sound\nPriority: optional\nArchitecture: amd64\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0, libasound2t64 | libasound2, libdbus-1-3, libayatana-appindicator3-1\nMaintainer: Rbg4445 <https://github.com/Rbg4445/Ytmnative>\nDescription: Ultra-lightweight pure-Rust YouTube Music desktop client\n" > "$PKG_ROOT/DEBIAN/control"
+          dpkg-deb --build --root-owner-group "$PKG_ROOT" "dist/ytm-native_${VER}_amd64.deb"
+          tar -czf "dist/YTM-Native-${VER}-linux-x64.tar.gz" -C target/release ytm-native
 
       - name: Publish Linux Assets to GitHub Release
         uses: softprops/action-gh-release@v2
