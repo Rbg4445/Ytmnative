@@ -5,30 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>YTM Native</title>
   <link rel="stylesheet" href="tailwind.css" />
-  <style id="bento-ui-css">
-    /* Bento 3-Pane Studio Layout (Spotify-inspired usable card layout + YTM glass) */
-    .bento-shell {
+  <style id="simpmusic-ui-css">
+    /* SimpMusic Inspired Material 3 Desktop UI Design */
+    :root {
+      --m3-bg: #0f1015;
+      --m3-surface: #171821;
+      --m3-surface-variant: #22232e;
+      --m3-primary: #FF0033;
+      --m3-primary-container: rgba(255, 0, 51, 0.14);
+      --m3-on-surface: #f1f0f7;
+      --m3-on-variant: #9b9aa6;
+    }
+    body {
+      background-color: var(--m3-bg);
+      color: var(--m3-on-surface);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .simpmusic-shell {
       display: flex;
       flex: 1;
       min-height: 0;
-      gap: 8px;
-      padding: 0 8px 8px 8px;
+      gap: 12px;
+      padding: 0 14px 10px 14px;
       overflow: hidden;
       position: relative;
       z-index: 10;
     }
-    .bento-card {
-      background: rgba(18, 18, 22, 0.82);
+    .m3-card {
+      background: var(--m3-surface);
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .m3-floating-player {
+      background: rgba(23, 24, 33, 0.94);
       backdrop-filter: blur(28px);
       -webkit-backdrop-filter: blur(28px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 12px;
-      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      margin: 0 14px 12px 14px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+    }
+    .m3-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 14px;
+      border-radius: 9999px;
+      color: var(--m3-on-variant);
+      font-weight: 500;
+      font-size: 13.5px;
+      transition: all 0.16s ease;
+      cursor: pointer;
+    }
+    .m3-nav-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+    }
+    .m3-nav-item.active {
+      background: var(--m3-primary-container);
+      color: #FF5C7A;
+      font-weight: 700;
     }
     .quick-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
+      gap: 10px;
     }
     @media (min-width: 900px) {
       .quick-grid {
@@ -38,23 +80,22 @@
     .quick-tile {
       display: flex;
       align-items: center;
-      gap: 10px;
-      height: 52px;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
+      gap: 12px;
+      height: 56px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
       overflow: hidden;
       cursor: pointer;
-      transition: background 0.16s ease, transform 0.16s ease;
-      padding-right: 10px;
+      transition: background 0.16s ease;
+      padding-right: 12px;
     }
     .quick-tile:hover {
-      background: rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.10);
     }
     .quick-tile-play {
       margin-left: auto;
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       border-radius: 9999px;
       background: #FF0033;
       color: #fff;
@@ -62,9 +103,9 @@
       align-items: center;
       justify-content: center;
       opacity: 0;
-      transform: translateY(3px);
+      transform: translateY(2px);
       transition: all 0.16s ease;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 4px 12px rgba(255, 0, 51, 0.4);
       flex-shrink: 0;
     }
     .quick-tile:hover .quick-tile-play,
@@ -80,7 +121,7 @@
       width: 100%;
       height: 4px;
       border-radius: 9999px;
-      background: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.16);
       position: relative;
       transition: height 0.12s ease;
     }
@@ -91,7 +132,7 @@
   <style id="theme-preset-css"></style>
   <style id="user-custom-css"></style>
 </head>
-<body class="bg-transparent text-white h-screen w-screen flex flex-col overflow-hidden relative">
+<body class="text-white h-screen w-screen flex flex-col overflow-hidden relative">
 
   <!-- ON-DEMAND / FIRST-LAUNCH INTRO VIDEO OVERLAY (0 bytes RAM when not active!) -->
   <div id="app-splash" class="hidden fixed inset-0 z-50 bg-black flex items-center justify-center transition-all duration-500 overflow-hidden opacity-0">
@@ -158,17 +199,17 @@
     <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/65 to-black/85"></div>
   </div>
 
-  <!-- TOP NAVIGATION BAR (Spotify/Modern Desktop Style: Brand + Back/Forward + Centered Home Pill & Omni-Search + Right Tools) -->
-  <header class="h-14 shrink-0 flex items-center justify-between px-3 gap-3 relative z-30 select-none">
+  <!-- TOP NAVIGATION BAR (Clean, Spacious, Spotify/Modern Desktop Style) -->
+  <header class="h-14 shrink-0 flex items-center justify-between px-4 gap-3 relative z-30 select-none">
     <!-- Left: Sidebar Toggle + Brand + History Back/Forward -->
     <div class="flex items-center gap-2">
-      <button id="btn-toggle-sidebar" title="Kitaplığı daralt / genişlet" class="w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <button id="btn-toggle-sidebar" title="Kitaplığı daralt / genişlet" class="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" d="M3 6h18M3 12h18M3 18h18" />
         </svg>
       </button>
       <div id="brand-logo" class="flex items-center gap-2 cursor-pointer pr-1" onclick="navigate('home')">
-        <svg class="w-7 h-7 shrink-0" viewBox="0 0 28 28">
+        <svg class="w-6 h-6 shrink-0" viewBox="0 0 28 28">
           <defs>
             <linearGradient id="ytmLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="#FF2A55"/>
@@ -181,113 +222,109 @@
           <rect x="14.8" y="9" width="2.6" height="12" rx="1.3" fill="#FFFFFF" fill-opacity="0.95" />
           <rect x="18.9" y="12.5" width="2.6" height="6" rx="1.3" fill="#FFFFFF" fill-opacity="0.88" />
         </svg>
-        <span class="text-[16px] font-bold tracking-tight text-white hidden sm:inline">YTM Native</span>
+        <span class="text-[15px] font-bold tracking-tight text-white hidden sm:inline">YTM Native</span>
       </div>
       <div class="flex items-center gap-1 ml-1">
-        <button onclick="navBack()" title="Geri" class="w-8 h-8 rounded-full bg-black/50 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+        <button onclick="navBack()" title="Geri" class="w-7 h-7 rounded-full bg-black/40 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </button>
-        <button onclick="navForward()" title="İleri" class="w-8 h-8 rounded-full bg-black/50 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+        <button onclick="navForward()" title="İleri" class="w-7 h-7 rounded-full bg-black/40 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- Center: Home Button + Pill Search Box + Explore Button -->
-    <div class="flex items-center justify-center gap-2 flex-1 max-w-[560px]">
-      <button data-nav="home" onclick="navigate('home')" title="Ana Sayfa" class="nav-top-pill w-10 h-10 rounded-full bg-[#1f1f24] hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition cursor-pointer shrink-0">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3.2 4 9.6V20h5.5v-6h5v6H20V9.6l-8-6.4Z"/></svg>
+    <!-- Center: Home Button + Pill Search Box -->
+    <div class="flex items-center justify-center gap-2 flex-1 max-w-[500px]">
+      <button data-nav="home" onclick="navigate('home')" title="Ana Sayfa" class="nav-top-pill w-9 h-9 rounded-full bg-[#1f1f24] hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition cursor-pointer shrink-0">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3.2 4 9.6V20h5.5v-6h5v6H20V9.6l-8-6.4Z"/></svg>
       </button>
 
       <div id="search-box-wrap" class="relative flex-1">
-        <div class="flex items-center gap-3 bg-[#1f1f24]/90 hover:bg-[#28282f] border border-white/[0.10] focus-within:bg-[#1a1a20] focus-within:border-white/35 rounded-full px-4 h-10 transition shadow-inner">
-          <svg class="w-4 h-4 text-neutral-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <div class="flex items-center gap-2.5 bg-[#1f1f24]/90 hover:bg-[#28282f] border border-white/[0.08] focus-within:bg-[#18181c] focus-within:border-white/30 rounded-full px-3.5 h-9 transition">
+          <svg class="w-4 h-4 text-neutral-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" />
           </svg>
-          <input id="search-input" type="text" autocomplete="off" data-i18n-placeholder="searchPlaceholder" placeholder="Ne çalmak istiyorsun? (Şarkı, sanatçı, albüm...)" class="w-full bg-transparent text-[13.5px] text-white placeholder-neutral-400 focus:outline-none" />
-          <button onclick="navigate('explore')" title="Keşfet / Gözat" class="pl-2.5 border-l border-white/15 text-neutral-300 hover:text-white transition cursor-pointer shrink-0">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polygon points="10,10 16,8 14,14 8,16" fill="currentColor"/></svg>
-          </button>
+          <input id="search-input" type="text" autocomplete="off" data-i18n-placeholder="searchPlaceholder" placeholder="Ne çalmak istiyorsun?" class="w-full bg-transparent text-[13px] text-white placeholder-neutral-400 focus:outline-none" />
         </div>
-        <div id="search-suggestions" class="hidden absolute left-0 right-0 top-12 rounded-xl bg-[#141418]/95 backdrop-blur-2xl border border-white/15 shadow-[0_18px_50px_rgba(0,0,0,0.85)] py-1.5 overflow-hidden z-50"></div>
+        <div id="search-suggestions" class="hidden absolute left-0 right-0 top-11 rounded-xl bg-[#141418]/95 backdrop-blur-2xl border border-white/15 shadow-[0_18px_50px_rgba(0,0,0,0.85)] py-1.5 overflow-hidden z-50"></div>
       </div>
     </div>
 
-    <!-- Right: Refresh + Right Panel Toggle + Pin + Mini Player + Account -->
+    <!-- Right: Mini Player + Pin + Account Avatar (Minimal, Uncluttered) -->
     <div class="flex items-center gap-2">
-      <button id="btn-header-refresh" onclick="refreshHome(true)" title="Önerileri Yenile (F5)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.10] text-xs font-medium text-neutral-200 transition cursor-pointer">
-        <svg id="icon-header-refresh" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-2.64-6.36L21 8m0-5v5h-5"/></svg>
-        <span data-i18n="refresh" class="hidden md:inline">Refresh</span>
-      </button>
-      <button id="btn-toggle-queue" onclick="toggleQueue()" title="Şimdi Çalıyor / Sözler / Sıra" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.10] text-xs font-medium text-[#FF0033] transition cursor-pointer">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h10M4 18h10M18 12v6l4-3-4-3Z"/></svg>
-        <span data-i18n="queueLyrics" class="hidden lg:inline">Panel</span>
-      </button>
-      <button id="btn-pin-top" onclick="toggleAlwaysOnTop()" title="Her Zaman Üstte" class="w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.10] flex items-center justify-center text-xs text-neutral-300 hover:text-white transition cursor-pointer">📌</button>
-      <button id="btn-mini-player" onclick="toggleMiniPlayer()" title="Mini Oynatıcı (Ctrl+M)" class="w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.10] flex items-center justify-center text-xs text-neutral-300 hover:text-white transition cursor-pointer">⧉</button>
-      <button id="btn-account-avatar" onclick="navigate('account')" title="Hesap ve Ayarlar" class="w-8 h-8 rounded-full bg-white/20 border border-white/20 hover:ring-2 hover:ring-white/40 flex items-center justify-center text-xs font-bold text-white transition cursor-pointer">
+      <button id="btn-pin-top" onclick="toggleAlwaysOnTop()" title="Her Zaman Üstte" class="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-xs text-neutral-400 hover:text-white transition cursor-pointer">📌</button>
+      <button id="btn-mini-player" onclick="toggleMiniPlayer()" title="Mini Oynatıcı (Ctrl+M)" class="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-xs text-neutral-400 hover:text-white transition cursor-pointer">⧉</button>
+      <button id="btn-account-avatar" onclick="navigate('account')" title="Hesap ve Ayarlar" class="w-8 h-8 rounded-full bg-neutral-700 hover:ring-2 hover:ring-white/40 flex items-center justify-center text-xs font-bold text-white transition cursor-pointer">
       </button>
     </div>
   </header>
 
-  <!-- 3-PANE BENTO WORKSPACE: [LEFT LIBRARY CARD] + [CENTER CONTENT CARD] + [RIGHT NOW PLAYING / ARTIST / LYRICS CARD] -->
-  <div class="bento-shell">
+  <!-- SIMPMUSIC MATERIAL 3 WORKSPACE: [LEFT SLIM NAV & LIBRARY] + [CENTER VIEWPORT] + [RIGHT DRAWER] -->
+  <div class="simpmusic-shell">
 
-    <!-- LEFT CARD: KİTAPLIĞIN (Playlists, Liked Songs, Followed & Recent Artists with Filter Pills & Search) -->
-    <aside id="sidebar" class="bento-card w-[280px] shrink-0 flex flex-col px-3 py-3 transition-all duration-150 select-none">
-      <!-- Header: Kitaplığın + Oluştur -->
-      <div class="flex items-center justify-between px-1.5 mb-3">
-        <button onclick="navigate('library')" class="flex items-center gap-2.5 text-neutral-300 hover:text-white font-bold text-[15px] transition cursor-pointer">
-          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6v14M9 6v14M14 7l5 13"/></svg>
-          <span data-i18n="navLibrary" class="sidebar-label truncate">Kitaplığın</span>
-        </button>
-        <button id="btn-new-playlist" onclick="toggleNewPlaylistBox()" class="sidebar-label flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.09] hover:bg-white/[0.18] text-xs font-semibold text-white transition cursor-pointer">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
-          <span>Oluştur</span>
+    <!-- LEFT CARD: NAVIGATION & LIBRARY (SimpMusic Style) -->
+    <aside id="sidebar" class="m3-card w-[240px] shrink-0 flex flex-col p-3 transition-all duration-150 select-none">
+      <!-- Main Nav Items (SimpMusic Style) -->
+      <div class="space-y-1 mb-2">
+        <div data-nav="home" onclick="navigate('home')" class="m3-nav-item active">
+          <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3.2 4 9.6V20h5.5v-6h5v6H20V9.6l-8-6.4Z"/></svg>
+          <span class="sidebar-label">Ana Sayfa</span>
+        </div>
+        <div data-nav="explore" onclick="navigate('explore')" class="m3-nav-item">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polygon points="10,10 16,8 14,14 8,16" fill="currentColor"/></svg>
+          <span class="sidebar-label">Keşfet</span>
+        </div>
+        <div data-nav="library" onclick="navigate('library')" class="m3-nav-item">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6v14M9 6v14M14 7l5 13"/></svg>
+          <span class="sidebar-label">Kitaplığın</span>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="h-px bg-white/[0.06] my-2"></div>
+
+      <!-- Library Header + Add Playlist -->
+      <div class="sidebar-label flex items-center justify-between px-2 mb-2">
+        <span class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Çalma Listeleri</span>
+        <button id="btn-new-playlist" onclick="toggleNewPlaylistBox()" title="Yeni Liste Oluştur" class="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white cursor-pointer transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
         </button>
       </div>
 
       <!-- New Playlist Inline Input -->
-      <div id="new-playlist-box" class="hidden mb-2.5 flex gap-1.5 px-1">
-        <input id="new-playlist-input" type="text" data-i18n-placeholder="playlistPlaceholder" placeholder="Çalma listesi adı..." class="flex-1 min-w-0 bg-[#1a1a1a] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white/40" />
-        <button onclick="createPlaylist()" data-i18n="add" class="px-2.5 py-1.5 rounded-lg bg-[#FF0033] hover:bg-[#e0002d] text-xs font-medium text-white cursor-pointer">Ekle</button>
+      <div id="new-playlist-box" class="hidden mb-2 flex gap-1.5 px-1">
+        <input id="new-playlist-input" type="text" data-i18n-placeholder="playlistPlaceholder" placeholder="Liste adı..." class="flex-1 min-w-0 bg-[#22232e] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none" />
+        <button onclick="createPlaylist()" data-i18n="add" class="px-2.5 py-1 rounded-lg bg-[#FF0033] text-xs font-medium text-white cursor-pointer">Ekle</button>
       </div>
 
-      <!-- Library Filter Chips (Tümü | Çalma Listeleri | Sanatçılar) -->
-      <div class="sidebar-label flex items-center gap-1.5 overflow-x-auto no-scrollbar px-1 mb-2.5">
-        <button id="lib-chip-all" onclick="setLibFilter('all')" class="px-3 py-1 rounded-full text-xs font-medium bg-white text-black transition cursor-pointer shrink-0">Tümü</button>
-        <button id="lib-chip-playlists" onclick="setLibFilter('playlists')" class="px-3 py-1 rounded-full text-xs font-medium bg-white/[0.08] hover:bg-white/[0.15] text-white transition cursor-pointer shrink-0">Çalma Listeleri</button>
-        <button id="lib-chip-artists" onclick="setLibFilter('artists')" class="px-3 py-1 rounded-full text-xs font-medium bg-white/[0.08] hover:bg-white/[0.15] text-white transition cursor-pointer shrink-0">Sanatçılar</button>
+      <!-- Library Filter Chips (Tümü | Listeler | Sanatçılar) -->
+      <div class="sidebar-label flex items-center gap-1 px-1 mb-2">
+        <button id="lib-chip-all" onclick="setLibFilter('all')" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white text-black transition cursor-pointer shrink-0">Tümü</button>
+        <button id="lib-chip-playlists" onclick="setLibFilter('playlists')" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/[0.08] hover:bg-white/[0.15] text-white transition cursor-pointer shrink-0">Listeler</button>
+        <button id="lib-chip-artists" onclick="setLibFilter('artists')" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/[0.08] hover:bg-white/[0.15] text-white transition cursor-pointer shrink-0">Sanatçılar</button>
       </div>
 
-      <!-- Library Quick Filter Input -->
-      <div class="sidebar-label px-1 mb-2">
-        <div class="flex items-center gap-2 bg-white/[0.05] border border-white/[0.07] rounded-lg px-2.5 py-1.5">
-          <svg class="w-3.5 h-3.5 text-neutral-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" /></svg>
-          <input id="lib-search-input" type="text" oninput="setLibSearch(this.value)" placeholder="Kitaplığında ara..." class="w-full bg-transparent text-xs text-white placeholder-neutral-400 focus:outline-none" />
-        </div>
-      </div>
-
-      <!-- Scrollable Rich Library List (Playlists with covers + Circular Artists) -->
-      <div id="sidebar-playlists" class="flex-1 overflow-y-auto space-y-1 pr-1"></div>
+      <!-- Scrollable Rich Library List -->
+      <div id="sidebar-playlists" class="flex-1 overflow-y-auto space-y-0.5 pr-1"></div>
 
       <!-- Bottom Version & Updates Pill -->
-      <button id="btn-updater-pill" onclick="navigate('updates')" class="sidebar-label mt-2 pt-2 border-t border-white/10 text-left px-2 py-1 text-[11.5px] text-neutral-400 hover:text-white transition cursor-pointer truncate">
-        v3.0.0 • Updates
+      <button id="btn-updater-pill" onclick="navigate('updates')" class="sidebar-label mt-2 pt-2 border-t border-white/[0.06] text-left px-2 py-1 text-[11px] text-neutral-400 hover:text-white transition cursor-pointer truncate">
+        v4.0.0 • Updates
       </button>
     </aside>
 
     <!-- CENTER CARD: MAIN SCROLLABLE VIEWPORT -->
-    <div class="bento-card flex-1 flex flex-col min-w-0 relative">
+    <div class="m3-card flex-1 flex flex-col min-w-0 relative">
       <!-- ERROR / STATUS TOAST -->
-      <div id="status-banner" class="hidden mx-6 mt-3 px-3.5 py-2 rounded-lg text-xs backdrop-blur-md"></div>
+      <div id="status-banner" class="hidden mx-6 mt-3 px-3.5 py-2 rounded-xl text-xs backdrop-blur-md"></div>
 
       <!-- SCROLLABLE MAIN CONTENT -->
-      <main id="main-content" class="flex-1 overflow-y-auto px-6 pt-5 pb-8"></main>
+      <main id="main-content" class="flex-1 overflow-y-auto px-7 pt-5 pb-8"></main>
     </div>
 
-    <!-- RIGHT CARD: NOW PLAYING STUDIO PANEL (Cover + Track Info + Artist Bio Card + Synced Lyrics + Up Next Queue) -->
-    <aside id="queue-drawer" class="bento-card flex w-[320px] shrink-0 flex-col px-4 py-3.5 select-none">
+    <!-- RIGHT CARD: NOW PLAYING STUDIO PANEL (Hidden by default, opens on demand!) -->
+    <aside id="queue-drawer" class="m3-card hidden w-[320px] shrink-0 flex-col px-4 py-3.5 select-none transition-all duration-200">
       <!-- Top Row: Tabs (Şimdi Çalıyor | Sözler | Sıradakiler) + Close -->
       <div class="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
         <div class="flex items-center gap-3">
@@ -298,7 +335,7 @@
         <button onclick="toggleQueue()" title="Paneli gizle" class="text-neutral-400 hover:text-white text-sm cursor-pointer">✕</button>
       </div>
 
-      <!-- TAB 1: NOW PLAYING + ARTIST CARD + LYRICS PREVIEW (Spotify Right Pane Style!) -->
+      <!-- TAB 1: NOW PLAYING + ARTIST CARD + LYRICS PREVIEW -->
       <div id="now-playing-panel" class="flex-1 overflow-y-auto space-y-4 pr-1"></div>
 
       <!-- TAB 2: FULL KARAOKE SYNCED LYRICS -->
@@ -309,8 +346,8 @@
     </aside>
   </div>
 
-  <!-- BOTTOM PLAYER BAR (Spotify/YTM Hybrid: Left Cover+Title+Like | Center Shuffle+Prev+Play+Next+Repeat & Time+SeekBar+Time | Right Lyrics+Queue+Sleep+Volume) -->
-  <footer id="player-bar" class="shrink-0 h-[82px] bg-[#09090d]/90 backdrop-blur-2xl border-t border-white/[0.08] px-4 grid grid-cols-3 items-center gap-4 select-none relative z-20">
+  <!-- FLOATING MATERIAL 3 BOTTOM PLAYER BAR (SimpMusic Signature Capsule Design) -->
+  <footer id="player-bar" class="shrink-0 h-[76px] m3-floating-player px-4 grid grid-cols-3 items-center gap-4 select-none relative z-20">
 
     <!-- LEFT: Cover + Title / Clickable Artist + Like Heart -->
     <div class="flex items-center gap-3.5 min-w-0">
@@ -374,6 +411,11 @@
     <!-- RIGHT: Quality Badge + Lyrics Button + Queue Button + Sleep Timer + Mute + Volume -->
     <div class="flex items-center justify-end gap-2.5">
       <span id="player-quality" class="text-[10.5px] px-2 py-0.5 rounded bg-white/[0.07] text-neutral-300 hidden xl:inline"></span>
+
+      <!-- Now Playing View Toggle Button (Spotify Right Sidebar icon) -->
+      <button onclick="toggleQueue()" title="Şimdi Çalıyor Paneli" class="p-1.5 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path stroke-linecap="round" d="M15 3v18"/></svg>
+      </button>
 
       <!-- Quick Lyrics Drawer Button -->
       <button onclick="openDrawerTab('lyrics')" title="Şarkı Sözleri" class="p-1.5 rounded hover:bg-white/10 text-neutral-300 hover:text-white transition cursor-pointer">

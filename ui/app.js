@@ -52,7 +52,8 @@ let state = {
   libFilter: "all",
   libSearch: "",
   sidebarExpanded: true,
-  queueOpen: true,
+  queueOpen: false,
+  homeCategory: "all",
   drawerTab: "now",
   lyricsTrackId: null,
   lyricsData: null,
@@ -100,7 +101,7 @@ let state = {
     stream_meta: null,
     last_error: null,
   },
-  updateStatus: { kind: "idle", version: "3.0.0", info: null, message: "" },
+  updateStatus: { kind: "idle", version: "4.0.0", info: null, message: "" },
   authMsg: "",
   authErr: "",
   authBusy: false,
@@ -358,11 +359,20 @@ function getSidebarArtists() {
 }
 
 function renderNav() {
+  document.querySelectorAll(".m3-nav-item").forEach((btn) => {
+    const active = btn.dataset.nav === state.page;
+    if (active) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+
   document.querySelectorAll(".nav-top-pill").forEach((btn) => {
     const active = btn.dataset.nav === state.page;
     btn.className = active
-      ? "nav-top-pill w-10 h-10 rounded-full bg-white text-black flex items-center justify-center transition cursor-pointer shrink-0 shadow"
-      : "nav-top-pill w-10 h-10 rounded-full bg-[#1f1f24] hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition cursor-pointer shrink-0";
+      ? "nav-top-pill w-9 h-9 rounded-full bg-white text-black flex items-center justify-center transition cursor-pointer shrink-0 shadow"
+      : "nav-top-pill w-9 h-9 rounded-full bg-[#1f1f24] hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition cursor-pointer shrink-0";
   });
 
   // Account avatar state
@@ -577,8 +587,8 @@ function renderArtistCarousel(id, artists) {
       ${artists
         .map((a) => {
           return `
-            <div onclick="openArtist('${esc(a.id || "")}', '${esc(a.name)}')" class="group w-[160px] shrink-0 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.09] border border-white/[0.05] transition cursor-pointer text-center">
-              <div class="relative w-[132px] h-[132px] mx-auto rounded-full overflow-hidden bg-[#222228] shadow-xl border border-white/10">
+            <div onclick="openArtist('${esc(a.id || "")}', '${esc(a.name)}')" class="group w-[156px] shrink-0 p-3 rounded-xl hover:bg-white/[0.06] transition cursor-pointer text-center">
+              <div class="relative w-[130px] h-[130px] mx-auto rounded-full overflow-hidden bg-[#202024] shadow-md">
                 ${
                   a.avatar_url
                     ? `<img src="${esc(a.avatar_url)}" loading="lazy" alt="" class="w-full h-full artist-round group-hover:scale-105 transition duration-300" />`
@@ -605,14 +615,14 @@ function renderCardCarousel(id, tracks) {
           const safeJson = esc(JSON.stringify(t));
           const primaryArtist = (t.artist || "").split(",")[0].trim();
           return `
-            <div class="group w-[176px] shrink-0 p-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.09] border border-white/[0.05] transition">
-              <div onclick='playTrackJson(${safeJson})' onmouseenter="schedulePrefetch('${esc(t.id)}')" onmouseleave="cancelPrefetch()" class="relative w-full aspect-square rounded-lg overflow-hidden bg-white/[0.05] shadow-lg cursor-pointer">
+            <div class="group w-[176px] shrink-0 p-3 rounded-xl hover:bg-white/[0.06] transition">
+              <div onclick='playTrackJson(${safeJson})' onmouseenter="schedulePrefetch('${esc(t.id)}')" onmouseleave="cancelPrefetch()" class="relative w-full aspect-square rounded-lg overflow-hidden bg-[#202024] shadow-md cursor-pointer">
                 ${
                   t.thumbnail_url
-                    ? `<img src="${esc(t.thumbnail_url)}" loading="lazy" alt="" class="w-full h-full object-cover group-hover:scale-[1.04] transition duration-300" />`
+                    ? `<img src="${esc(t.thumbnail_url)}" loading="lazy" alt="" class="w-full h-full object-cover group-hover:scale-[1.03] transition duration-300" />`
                     : ""
                 }
-                <div class="absolute inset-0 bg-black/15 group-hover:bg-black/40 transition flex items-end justify-end p-2.5">
+                <div class="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition flex items-end justify-end p-2.5">
                   <div class="w-10 h-10 rounded-full bg-[#FF0033] text-white flex items-center justify-center shadow-xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 ${active ? "opacity-100 translate-y-0" : ""} transition-all">
                     <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z"/>
@@ -620,7 +630,7 @@ function renderCardCarousel(id, tracks) {
                   </div>
                 </div>
               </div>
-              <div onclick='playTrackJson(${safeJson})' class="mt-2.5 text-[13.5px] font-semibold leading-snug line-clamp-1 cursor-pointer ${
+              <div onclick='playTrackJson(${safeJson})' class="mt-2.5 text-[14px] font-semibold leading-snug line-clamp-1 cursor-pointer ${
                 active ? "text-[#FF0033]" : "text-white"
               }">${esc(t.title)}</div>
               <div onclick="openArtist('${esc(t.artist_id || "")}', '${esc(primaryArtist)}')" class="mt-0.5 text-[12.5px] text-neutral-400 hover:text-white hover:underline line-clamp-1 cursor-pointer">${esc(t.artist)}</div>
@@ -705,14 +715,17 @@ function renderTrackRows(tracks, opts = {}) {
 
 let currentCollectionTracks = [];
 
+function setHomeCategory(cat) {
+  state.homeCategory = cat;
+  renderMain();
+}
+
 function renderMain() {
   const main = document.getElementById("main-content");
 
   if (state.page === "home") {
     const recent =
       state.ytHistory.length > 0 ? state.ytHistory : state.library.recently_played;
-    const recentEyebrow =
-      state.ytHistory.length > 0 ? t("ytHistoryEyebrow") : t("recentEyebrow");
     const recTitle =
       state.ytHistory.length > 0
         ? t("ytRecsTitle")
@@ -720,99 +733,109 @@ function renderMain() {
         ? t("personalRecsTitle")
         : t("quickPicksTitle");
 
+    const cat = state.homeCategory || "all";
+
     main.innerHTML = `
-      <!-- MOOD CHIPS ROW -->
-      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
-        <button onclick="clearMood()" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${
-          !state.activeMood
-            ? "bg-white text-black border-white"
-            : "bg-white/[0.08] hover:bg-white/[0.16] text-white border-white/[0.08]"
+      <!-- TOP CLEAN CATEGORY PILLS (SPOTIFY STYLE) -->
+      <div class="flex items-center gap-2 mb-6">
+        <button onclick="setHomeCategory('all')" class="px-4 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+          cat === 'all' ? 'bg-white text-black' : 'bg-white/[0.08] hover:bg-white/[0.15] text-white'
         }">Tümü</button>
-        ${getMoods().map(([label, query]) => {
-          const active = state.activeMood === label;
-          return `
-            <button onclick="selectMood('${esc(label)}', '${esc(query)}')" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${
-              active
-                ? "bg-white text-black border-white"
-                : "bg-white/[0.08] hover:bg-white/[0.16] text-white border-white/[0.08]"
-            }">${esc(label)}</button>
-          `;
-        }).join("")}
+        <button onclick="setHomeCategory('music')" class="px-4 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+          cat === 'music' ? 'bg-white text-black' : 'bg-white/[0.08] hover:bg-white/[0.15] text-white'
+        }">Müzik</button>
+        <button onclick="setHomeCategory('playlists')" class="px-4 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+          cat === 'playlists' ? 'bg-white text-black' : 'bg-white/[0.08] hover:bg-white/[0.15] text-white'
+        }">Listeler</button>
+        <button onclick="setHomeCategory('artists')" class="px-4 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+          cat === 'artists' ? 'bg-white text-black' : 'bg-white/[0.08] hover:bg-white/[0.15] text-white'
+        }">Sanatçılar</button>
       </div>
 
-      <!-- SPOTIFY-STYLE 2x4 QUICK ACCESS GRID -->
-      ${renderQuickAccessTiles()}
-
       ${
-        state.activeMood
+        cat === "playlists"
           ? `
-        <section class="mb-9">
-          <div class="flex items-end justify-between mb-3">
-            <div>
-              <div class="text-[11px] uppercase tracking-wider text-neutral-400">${esc(t("moodEyebrow"))}</div>
-              <h2 class="text-[22px] font-bold leading-tight">${esc(state.activeMood)} ${
-                state.loadingMood ? `<span class="text-sm font-normal text-[#FF0033] ml-2">${esc(t("loading"))}</span>` : ""
-              }</h2>
+        <section class="mb-10">
+          <h2 class="text-xl font-bold mb-4 text-white">Çalma Listelerin</h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div onclick="navigate('liked')" class="p-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition cursor-pointer">
+              <div class="w-full aspect-square rounded-lg bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#FF0033] flex items-center justify-center text-3xl text-white shadow-lg mb-3">♥</div>
+              <div class="font-bold text-sm text-white truncate">${esc(t("likedMusic"))}</div>
+              <div class="text-xs text-neutral-400 mt-1">${state.library.liked_tracks.length} şarkı</div>
             </div>
-            <button onclick="clearMood()" class="px-3.5 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-medium text-white cursor-pointer">${esc(t("clearFilter"))}</button>
+            ${state.library.playlists.map(pl => `
+              <div onclick="navigate('playlist', '${esc(pl.id)}')" class="p-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition cursor-pointer">
+                <div class="w-full aspect-square rounded-lg bg-[#222228] overflow-hidden flex items-center justify-center text-neutral-400 shadow-lg mb-3">
+                  ${pl.tracks[0]?.thumbnail_url ? `<img src="${esc(pl.tracks[0].thumbnail_url)}" class="w-full h-full object-cover" />` : "♫"}
+                </div>
+                <div class="font-bold text-sm text-white truncate">${esc(pl.name)}</div>
+                <div class="text-xs text-neutral-400 mt-1">${pl.tracks.length} şarkı</div>
+              </div>
+            `).join("")}
           </div>
-          ${renderCardCarousel("carousel-mood", state.moodTracks)}
         </section>`
-          : ""
-      }
-
-      ${
-        recent.length > 0
+          : cat === "artists"
           ? `
-        <section class="mb-9">
-          <div class="flex items-end justify-between mb-3">
-            <div>
-              <div class="text-[11px] uppercase tracking-wider text-neutral-400">${esc(recentEyebrow)}</div>
-              <h2 class="text-[22px] font-bold leading-tight">${esc(t("listenAgain"))}</h2>
-            </div>
-            <div class="flex items-center gap-2">
-              <button onclick="scrollCarousel('carousel-recent', -420)" class="w-8 h-8 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-base text-white cursor-pointer">‹</button>
-              <button onclick="scrollCarousel('carousel-recent', 420)" class="w-8 h-8 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-base text-white cursor-pointer">›</button>
-            </div>
+        <section class="mb-10">
+          <h2 class="text-xl font-bold mb-4 text-white">Takip Ettiğin ve Önerilen Sanatçılar</h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            ${getSidebarArtists().map(a => `
+              <div onclick="openArtist('${esc(a.id || "")}', '${esc(a.name)}')" class="p-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition cursor-pointer text-center">
+                <div class="w-28 h-28 mx-auto rounded-full overflow-hidden bg-[#222228] shadow-md mb-3">
+                  ${a.avatar_url ? `<img src="${esc(a.avatar_url)}" class="w-full h-full object-cover artist-round" />` : `<div class="w-full h-full flex items-center justify-center text-2xl font-bold text-neutral-400">${esc(a.name.charAt(0))}</div>`}
+                </div>
+                <div class="font-bold text-sm text-white truncate">${esc(a.name)}</div>
+                <div class="text-xs text-neutral-400 mt-0.5">${esc(fmtCount(a.subscriber_count) || "Sanatçı")}</div>
+              </div>
+            `).join("")}
           </div>
-          ${renderCardCarousel("carousel-recent", recent)}
         </section>`
-          : ""
-      }
+          : `
+        <!-- SPOTIFY-STYLE 2x4 QUICK ACCESS GRID -->
+        ${renderQuickAccessTiles()}
 
-      <section class="mb-8">
-        <div class="flex items-end justify-between mb-3">
-          <div>
-            <div class="text-[11px] uppercase tracking-wider text-neutral-400">${
-              state.loadingHome ? esc(t("loadingUpper")) : esc(t("pickedEyebrow"))
-            }</div>
-            <h2 class="text-[22px] font-bold leading-tight">${esc(recTitle)}</h2>
-          </div>
-          <div class="flex items-center gap-2">
-            <button onclick="refreshHome(true)" ${state.loadingHome ? "disabled" : ""} class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 text-xs font-medium text-white transition cursor-pointer disabled:opacity-60">
-              <svg class="w-3.5 h-3.5 ${state.loadingHome ? "animate-spin text-[#FF0033]" : ""}" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-2.64-6.36L21 8m0-5v5h-5"/></svg>
-              <span>${state.loadingHome ? esc(t("refreshing")) : esc(t("refresh"))}</span>
-            </button>
-            <button onclick="scrollCarousel('carousel-rec', -420)" class="w-8 h-8 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-base text-white cursor-pointer">‹</button>
-            <button onclick="scrollCarousel('carousel-rec', 420)" class="w-8 h-8 rounded-full border border-white/15 hover:bg-white/10 flex items-center justify-center text-base text-white cursor-pointer">›</button>
-          </div>
-        </div>
-        ${renderCardCarousel("carousel-rec", state.recommendations)}
-      </section>
-
-      ${
-        getSidebarArtists().length > 0
-          ? `
-        <section class="mb-6">
-          <div class="flex items-end justify-between mb-3">
-            <div>
-              <div class="text-[11px] uppercase tracking-wider text-neutral-400">SANATÇILAR</div>
-              <h2 class="text-[22px] font-bold leading-tight">Favori sanatçıların</h2>
+        <!-- FEATURED RECOMMENDATIONS CAROUSEL -->
+        <section class="mb-10">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-white tracking-tight">${esc(recTitle)}</h2>
+            <div class="flex items-center gap-1.5">
+              <button onclick="scrollCarousel('carousel-rec', -420)" class="w-7 h-7 rounded-full bg-black/40 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white cursor-pointer transition">‹</button>
+              <button onclick="scrollCarousel('carousel-rec', 420)" class="w-7 h-7 rounded-full bg-black/40 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white cursor-pointer transition">›</button>
             </div>
           </div>
-          ${renderArtistCarousel("carousel-home-artists", getSidebarArtists())}
-        </section>`
-          : ""
+          ${renderCardCarousel("carousel-rec", state.recommendations)}
+        </section>
+
+        <!-- RECENT TRACKS / LISTEN AGAIN -->
+        ${
+          recent.length > 0
+            ? `
+          <section class="mb-10">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-bold text-white tracking-tight">${esc(t("listenAgain"))}</h2>
+              <div class="flex items-center gap-1.5">
+                <button onclick="scrollCarousel('carousel-recent', -420)" class="w-7 h-7 rounded-full bg-black/40 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white cursor-pointer transition">‹</button>
+                <button onclick="scrollCarousel('carousel-recent', 420)" class="w-7 h-7 rounded-full bg-black/40 hover:bg-white/15 flex items-center justify-center text-neutral-300 hover:text-white cursor-pointer transition">›</button>
+              </div>
+            </div>
+            ${renderCardCarousel("carousel-recent", recent)}
+          </section>`
+            : ""
+        }
+
+        <!-- FAVORITE ARTISTS ROW -->
+        ${
+          getSidebarArtists().length > 0
+            ? `
+          <section class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-bold text-white tracking-tight">Favori Sanatçıların</h2>
+            </div>
+            ${renderArtistCarousel("carousel-home-artists", getSidebarArtists())}
+          </section>`
+            : ""
+        }
+      `
       }
     `;
     return;
@@ -1733,7 +1756,7 @@ function downloadUserscript() {
   const script = `// ==UserScript==
 // @name         YTM Native — Open Links in Desktop App
 // @namespace    https://github.com/Rbg4445/Ytmnative
-// @version      3.0.0
+// @version      4.0.0
 // @description  Soft-opens actionable YouTube Music links via ytmd:// protocol
 // @match        *://music.youtube.com/*
 // @grant        GM_registerMenuCommand
