@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 290" width="1200" height="290" role="img" aria-label="RAM Kullanım Karşılaştırması">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090d"/>
+      <stop offset="100%" stop-color="#111018"/>
+    </linearGradient>
+    <linearGradient id="barGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+    <linearGradient id="barAmber" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#FBBF24"/>
+    </linearGradient>
+    <linearGradient id="barRed" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#F87171"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="290" rx="20" fill="url(#bg2)" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="1.5"/>
+
+  <text x="44" y="48" fill="#FF4D6D" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" letter-spacing="1.4">PERFORMANS KARŞILAŞTIRMASI</text>
+  <text x="44" y="78" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="24" font-weight="800">Arka Plan Bellek Kullanımı (Müzik Çalarken)</text>
+
+  <!-- Pill highlight -->
+  <rect x="930" y="34" width="226" height="36" rx="18" fill="#10B981" fill-opacity="0.15" stroke="#10B981" stroke-opacity="0.5"/>
+  <text x="954" y="57" fill="#6EE7B7" font-family="Segoe UI, sans-serif" font-size="13.5" font-weight="700">⚡ %95'e Kadar Daha Hafif</text>
+
+  <!-- Row 1: YTM Native -->
+  <g transform="translate(44, 110)">
+    <text x="0" y="22" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="15" font-weight="700">YTM Native (Rust + Tray)</text>
+    <rect x="260" y="4" width="760" height="26" rx="13" fill="#FFFFFF" fill-opacity="0.06"/>
+    <rect x="260" y="4" width="76" height="26" rx="13" fill="url(#barGreen)"/>
+    <text x="352" y="22" fill="#6EE7B7" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">~12 MB Private  /  ~51 MB WorkingSet</text>
+  </g>
+
+  <!-- Row 2: Electron Clients -->
+  <g transform="translate(44, 162)">
+    <text x="0" y="22" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="15" font-weight="600">Electron YTM İstemcileri</text>
+    <rect x="260" y="4" width="760" height="26" rx="13" fill="#FFFFFF" fill-opacity="0.06"/>
+    <rect x="260" y="4" width="540" height="26" rx="13" fill="url(#barAmber)"/>
+    <text x="814" y="22" fill="#FDE68A" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">~380 MB RAM</text>
+  </g>
+
+  <!-- Row 3: Chrome Tab -->
+  <g transform="translate(44, 214)">
+    <text x="0" y="22" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="15" font-weight="600">Chrome / Edge Sekmesi</text>
+    <rect x="260" y="4" width="760" height="26" rx="13" fill="#FFFFFF" fill-opacity="0.06"/>
+    <rect x="260" y="4" width="725" height="26" rx="13" fill="url(#barRed)"/>
+    <text x="1036" y="22" fill="#FCA5A5" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700">~520+ MB</text>
+  </g>
+</svg>

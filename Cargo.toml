@@ -1,0 +1,43 @@
+[package]
+name = "ytm-native"
+version = "1.0.0"
+edition = "2021"
+description = "Ultra-lightweight native YouTube Music desktop client written in Rust + Tailwind CSS"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri v2 desktop shell + System Tray (destroys WebView in background for ~20 MB RAM!)
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+
+# YouTube / YouTube Music API
+rustypipe = { version = "0.11", features = ["userdata"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "process"] }
+futures = "0.3"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "blocking"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Audio decoding & native output
+symphonia = { version = "0.5", default-features = false, features = ["aac", "isomp4", "mp3", "pcm", "mkv"] }
+cpal = "0.15"
+rtrb = "0.3"
+
+# System Media Transport Controls (Windows SMTC / MPRIS / macOS)
+souvlaki = "0.8"
+
+# Utilities
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[target.'cfg(windows)'.dependencies]
+raw-window-handle = "0.6"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "unwind"

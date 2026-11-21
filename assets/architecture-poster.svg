@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 240" width="1200" height="240" role="img" aria-label="YTM Native Mimari Akışı">
+  <defs>
+    <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090e"/>
+      <stop offset="100%" stop-color="#0f1018"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#FF4D6D"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="240" rx="20" fill="url(#bg4)" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="1.5"/>
+  <text x="44" y="42" fill="#FF4D6D" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" letter-spacing="1.4">MİMARİ AKIŞ</text>
+  <text x="44" y="70" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="22" font-weight="800">Uçtan Uca Saf Rust Ses ve Arayüz Hattı</text>
+
+  <!-- Node 1 -->
+  <g transform="translate(44, 102)">
+    <rect width="240" height="102" rx="14" fill="#FFFFFF" fill-opacity="0.05" stroke="#FF0033" stroke-opacity="0.45"/>
+    <text x="18" y="32" fill="#FF4D6D" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700">1. ARAYÜZ</text>
+    <text x="18" y="56" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="15.5" font-weight="700">Tauri v2 + Tailwind v4</text>
+    <text x="18" y="78" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12">Cam efektli koyu UI, kapanınca</text>
+    <text x="18" y="93" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12">WebView2 RAM'den tamamen silinir</text>
+  </g>
+
+  <line x1="288" y1="153" x2="334" y2="153" stroke="#FF4D6D" stroke-width="2.2" marker-end="url(#arrow)"/>
+
+  <!-- Node 2 -->
+  <g transform="translate(340, 102)">
+    <rect width="240" height="102" rx="14" fill="#FFFFFF" fill-opacity="0.05" stroke="#60A5FA" stroke-opacity="0.45"/>
+    <text x="18" y="32" fill="#60A5FA" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700">2. AKIŞ ÇÖZÜCÜ</text>
+    <text x="18" y="56" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="15.5" font-weight="700">Innertube HLS (Rust)</text>
+    <text x="18" y="78" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12">~350 ms saf Rust çözümleme,</text>
+    <text x="18" y="93" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12">otomatik yt-dlp yedeği + önbellek</text>
+  </g>
+
+  <line x1="584" y1="153" x2="630" y2="153" stroke="#FF4D6D" stroke-width="2.2" marker-end="url(#arrow)"/>
+
+  <!-- Node 3 -->
+  <g transform="translate(636, 102)">
+    <rect width="240" height="102" rx="14" fill="#FFFFFF" fill-opacity="0.05" stroke="#34D399" stroke-opacity="0.45"/>
+    <text x="18" y="32" fill="#34D399" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700">3. SES MOTORU</text>
+    <text x="18" y="56" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="15.5" font-weight="700">Symphonia + DSP</text>
+    <text x="18" y="78" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12">AAC/ADTS decode, 4-noktalı</text>
+    <text x="18" y="93" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12">Catmull-Rom + ses normalizasyonu</text>
+  </g>
+
+  <line x1="880" y1="153" x2="926" y2="153" stroke="#FF4D6D" stroke-width="2.2" marker-end="url(#arrow)"/>
+
+  <!-- Node 4 -->
+  <g transform="translate(932, 102)">
+    <rect width="224" height="102" rx="14" fill="#FFFFFF" fill-opacity="0.05" stroke="#C084FC" stroke-opacity="0.45"/>
+    <text x="18" y="32" fill="#C084FC" font-family="Segoe UI, sans-serif" font-size="11.5" font-weight="700">4. SİSTEM ÇIKIŞI</text>
+    <text x="18" y="56" fill="#FFFFFF" font-family="Segoe UI, sans-serif" font-size="15.5" font-weight="700">WASAPI &amp; SMTC</text>
+    <text x="18" y="78" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12">Donanım medya tuşları,</text>
+    <text x="18" y="93" fill="#A1A1AA" font-family="Segoe UI, sans-serif" font-size="12">sistem tepsisi, 0% boşta CPU</text>
+  </g>
+</svg>

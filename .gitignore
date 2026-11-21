@@ -1,0 +1,29 @@
+# Rust & Tauri build outputs
+/target/
+/gen/
+**/*.rs.bk
+
+# Installer build outputs (published via GitHub Releases, not tracked in git)
+/dist/
+
+# Environment & secret files
+.env
+.env.*
+*.env
+*.pem
+*.key
+cookies*.txt
+cookies*.json
+library.json
+rp_cache/
+
+# Node / Tailwind temp
+node_modules/
+
+# Logs & temporary files
+*.log
+*.tmp
+*.old
+*.new
+.DS_Store
+Thumbs.db

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Music — Native</title>
+  <link rel="stylesheet" href="tailwind.css" />
+  <style id="user-custom-css"></style>
+</head>
+<body class="bg-[#030303] text-white h-screen w-screen flex flex-col overflow-hidden relative">
+
+  <!-- ON-DEMAND / FIRST-LAUNCH INTRO VIDEO OVERLAY (0 bytes RAM when not active!) -->
+  <div id="app-splash" class="hidden fixed inset-0 z-50 bg-black flex items-center justify-center transition-all duration-500 overflow-hidden opacity-0">
+    <video id="intro-video" playsinline class="w-full h-full object-cover"></video>
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+    <div id="splash-status" class="fixed bottom-8 left-8 text-xs text-white/60 tracking-wide"></div>
+    <button id="btn-skip-intro" onclick="hideSplash()" class="fixed bottom-7 right-7 flex items-center gap-2 px-5 py-2.5 rounded-full bg-black/55 hover:bg-[#FF0033] backdrop-blur-xl border border-white/25 hover:border-[#FF0033] text-sm font-semibold text-white shadow-2xl transition cursor-pointer">
+      <span>Atla</span>
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+    </button>
+  </div>
+
+  <!-- AUTOMATIC UPDATE OVERLAY (shows when a newer GitHub Release is downloading/installing) -->
+  <div id="auto-update-overlay" class="hidden fixed inset-0 z-40 bg-black/75 backdrop-blur-xl flex items-center justify-center">
+    <div class="w-[380px] bg-[#141418]/90 border border-white/15 rounded-2xl p-6 text-center shadow-2xl">
+      <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-[#FF0033]/15 border border-[#FF0033]/40 flex items-center justify-center">
+        <svg class="w-6 h-6 text-[#FF0033] animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+          <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"></path>
+        </svg>
+      </div>
+      <div id="auto-update-title" class="text-base font-bold text-white mb-1">Yeni Güncelleme İndiriliyor</div>
+      <div id="auto-update-sub" class="text-xs text-neutral-400">Uygulama otomatik olarak güncellenip yeniden başlatılacak...</div>
+    </div>
+  </div>
+
+  <!-- COMPACT 5-SECOND STARTUP UPDATE CHECK TOAST -->
+  <div id="update-check-toast" class="hidden fixed top-4 right-4 z-40 flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-black/70 backdrop-blur-xl border border-white/15 text-xs text-neutral-200 shadow-xl">
+    <svg class="w-3.5 h-3.5 text-[#FF0033] animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+      <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"></path>
+    </svg>
+    <span id="update-check-toast-text">Güncelleme kontrol ediliyor...</span>
+  </div>
+
+  <!-- DYNAMIC AMBIENT GLASS BACKDROP (shifts color smoothly with active album cover!) -->
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#030303]">
+    <div class="absolute -top-32 -left-24 w-[520px] h-[520px] rounded-full bg-[#FF0033]/[0.14] blur-[130px]"></div>
+    <div class="absolute bottom-0 right-0 w-[460px] h-[460px] rounded-full bg-[#8b0a28]/[0.12] blur-[140px]"></div>
+    <img id="ambient-bg-img" src="" alt="" class="hidden w-full h-full object-cover scale-125 blur-[110px] opacity-[0.22] saturate-150 transition-opacity duration-700" />
+    <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/75 to-[#030303]/95"></div>
+  </div>
+
+  <!-- MAIN SHELL: SIDEBAR + CONTENT + QUEUE -->
+  <div class="flex flex-1 min-h-0 overflow-hidden relative z-10">
+
+    <!-- LEFT SIDEBAR (Frosted Translucent Glass) -->
+    <aside id="sidebar" class="w-[240px] shrink-0 bg-black/55 backdrop-blur-2xl border-r border-white/[0.08] flex flex-col px-3 py-3.5 transition-all duration-150">
+      <!-- Top Brand Row -->
+      <div class="flex items-center gap-4 px-2 mb-6">
+        <button id="btn-toggle-sidebar" title="Menüyü daralt" class="p-1.5 rounded-full hover:bg-white/10 text-white transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
+        <div id="brand-logo" class="flex items-center gap-2 cursor-pointer" onclick="navigate('home')">
+          <svg class="w-7 h-7 shrink-0" viewBox="0 0 28 28">
+            <defs>
+              <linearGradient id="ytmLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FF2A55"/>
+                <stop offset="100%" stop-color="#CC0029"/>
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width="26" height="26" rx="7" fill="url(#ytmLogoGrad)" />
+            <rect x="6.5" y="11.5" width="2.6" height="7" rx="1.3" fill="#FFFFFF" fill-opacity="0.92" />
+            <rect x="10.6" y="7" width="2.6" height="14" rx="1.3" fill="#FFFFFF" />
+            <rect x="14.8" y="9" width="2.6" height="12" rx="1.3" fill="#FFFFFF" fill-opacity="0.95" />
+            <rect x="18.9" y="12.5" width="2.6" height="6" rx="1.3" fill="#FFFFFF" fill-opacity="0.88" />
+          </svg>
+          <span class="sidebar-label text-[19px] font-bold tracking-tight text-white">YTM Native</span>
+        </div>
+      </div>
+
+      <!-- Primary Nav -->
+      <nav class="space-y-1">
+        <button data-nav="home" onclick="navigate('home')" class="nav-item w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-[14.5px] font-medium transition cursor-pointer">
+          <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3.2 4 9.6V20h5.5v-6h5v6H20V9.6l-8-6.4Z"/></svg>
+          <span class="sidebar-label truncate">Ana Sayfa</span>
+        </button>
+        <button data-nav="explore" onclick="navigate('explore')" class="nav-item w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-[14.5px] font-medium transition cursor-pointer">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polygon points="10,10 16,8 14,14 8,16" fill="currentColor"/></svg>
+          <span class="sidebar-label truncate">Keşfet</span>
+        </button>
+        <button data-nav="library" onclick="navigate('library')" class="nav-item w-full flex items-center gap-4 px-3 py-2.5 rounded-lg text-[14.5px] font-medium transition cursor-pointer">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1Z"/></svg>
+          <span class="sidebar-label truncate">Kitaplık</span>
+        </button>
+      </nav>
+
+      <!-- Divider + New Playlist + Playlists -->
+      <div class="sidebar-label flex flex-col flex-1 min-h-0 mt-5 pt-4 border-t border-white/10">
+        <button id="btn-new-playlist" onclick="toggleNewPlaylistBox()" class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-full bg-white/[0.10] hover:bg-white/[0.18] text-[13.5px] font-medium text-white transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+          <span>Yeni oynatma listesi</span>
+        </button>
+
+        <div id="new-playlist-box" class="hidden mt-2 flex gap-1.5">
+          <input id="new-playlist-input" type="text" placeholder="Liste adı..." class="flex-1 min-w-0 bg-[#1a1a1a] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white/40" />
+          <button onclick="createPlaylist()" class="px-2.5 py-1.5 rounded-lg bg-[#FF0033] hover:bg-[#e0002d] text-xs font-medium text-white cursor-pointer">Ekle</button>
+        </div>
+
+        <div id="sidebar-playlists" class="flex-1 overflow-y-auto mt-4 space-y-1 pr-1"></div>
+
+        <!-- Subtle Updater Link -->
+        <button id="btn-updater-pill" onclick="navigate('updates')" class="mt-2 pt-2 border-t border-white/10 text-left px-2 py-1 text-[11.5px] text-neutral-400 hover:text-white transition cursor-pointer truncate">
+          v1.0.0 • Güncelleme
+        </button>
+      </div>
+    </aside>
+
+    <!-- RIGHT WORKSPACE: TOP HEADER + SCROLLABLE MAIN VIEW -->
+    <div class="flex-1 flex flex-col min-w-0 bg-transparent">
+
+      <!-- TOP HEADER (Frosted Glass) -->
+      <header class="h-16 shrink-0 flex items-center justify-between px-8 gap-4 bg-black/35 backdrop-blur-xl border-b border-white/[0.06] relative z-30">
+        <!-- Search Box + Live Autocomplete Suggestions Dropdown -->
+        <div id="search-box-wrap" class="relative flex-1 max-w-[480px]">
+          <div class="flex items-center gap-3 bg-white/[0.08] backdrop-blur-lg border border-white/[0.12] focus-within:bg-black/75 focus-within:border-white/35 rounded-xl px-3.5 h-10 transition shadow-inner">
+            <svg class="w-4 h-4 text-neutral-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" />
+            </svg>
+            <input id="search-input" type="text" autocomplete="off" placeholder="Şarkı, albüm, sanatçı veya podcast arayın" class="w-full bg-transparent text-[14px] text-white placeholder-neutral-400 focus:outline-none" />
+          </div>
+          <div id="search-suggestions" class="hidden absolute left-0 right-0 top-12 rounded-xl bg-[#121216]/95 backdrop-blur-2xl border border-white/15 shadow-[0_18px_50px_rgba(0,0,0,0.8)] py-1.5 overflow-hidden z-50"></div>
+        </div>
+
+        <!-- Right Header Controls: Refresh + Queue Toggle + Account Avatar -->
+        <div class="flex items-center gap-2.5">
+          <button id="btn-header-refresh" onclick="refreshHome(true)" title="Yeni öneriler getir (F5)" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] backdrop-blur-md border border-white/[0.10] text-xs font-medium text-neutral-200 transition cursor-pointer">
+            <svg id="icon-header-refresh" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-2.64-6.36L21 8m0-5v5h-5"/></svg>
+            <span>Yenile</span>
+          </button>
+          <button id="btn-toggle-queue" onclick="toggleQueue()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] backdrop-blur-md border border-white/[0.10] text-xs font-medium text-neutral-200 transition cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h10M4 18h10M18 12v6l4-3-4-3Z"/></svg>
+            <span>Sıra / Sözler</span>
+          </button>
+          <button id="btn-account-avatar" onclick="navigate('account')" title="YouTube Hesabı Bağla" class="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/20 hover:ring-2 hover:ring-white/40 flex items-center justify-center text-xs font-bold text-white transition cursor-pointer">
+          </button>
+        </div>
+      </header>
+
+      <!-- ERROR / STATUS TOAST -->
+      <div id="status-banner" class="hidden mx-8 mt-2 px-3.5 py-2 rounded-lg text-xs backdrop-blur-md"></div>
+
+      <!-- SCROLLABLE MAIN CONTENT -->
+      <main id="main-content" class="flex-1 overflow-y-auto px-8 pt-6 pb-8"></main>
+    </div>
+
+    <!-- COLLAPSIBLE RIGHT DRAWER (Frosted Translucent Glass: Sıradakiler | Sözler) -->
+    <aside id="queue-drawer" class="hidden w-[320px] shrink-0 bg-black/60 backdrop-blur-2xl border-l border-white/[0.08] flex-col px-4 py-4">
+      <div class="flex items-center justify-between mb-3 border-b border-white/10 pb-2.5">
+        <div class="flex items-center gap-4">
+          <button id="tab-drawer-queue" onclick="switchDrawerTab('queue')" class="text-xs font-bold tracking-wider uppercase text-white border-b-2 border-[#FF0033] pb-1 cursor-pointer">Sıradakiler</button>
+          <button id="tab-drawer-lyrics" onclick="switchDrawerTab('lyrics')" class="text-xs font-bold tracking-wider uppercase text-neutral-400 hover:text-white pb-1 cursor-pointer">Sözler</button>
+        </div>
+        <button onclick="toggleQueue()" class="text-neutral-400 hover:text-white text-sm cursor-pointer">✕</button>
+      </div>
+      <div id="queue-list" class="flex-1 overflow-y-auto space-y-1"></div>
+      <div id="lyrics-panel" class="hidden flex-1 overflow-y-auto pr-1 text-[14px] leading-relaxed text-neutral-200 whitespace-pre-line"></div>
+    </aside>
+  </div>
+
+  <!-- OFFICIAL YOUTUBE MUSIC FROSTED GLASS BOTTOM PLAYER BAR -->
+  <footer id="player-bar" class="hidden shrink-0 bg-[#141418]/75 backdrop-blur-2xl border-t border-white/[0.10] shadow-[0_-10px_40px_rgba(0,0,0,0.65)] flex flex-col select-none relative z-20">
+    <!-- Top-Edge Interactive Glowing YouTube Red Seek Bar -->
+    <div id="seek-bar-wrap" class="group relative w-full h-2 -mt-1 flex items-center cursor-pointer">
+      <div class="w-full h-[3px] group-hover:h-[5px] bg-white/15 transition-all relative">
+        <div id="seek-bar-fill" class="h-full bg-[#FF0033] shadow-[0_0_10px_rgba(255,0,51,0.8)] w-0 relative">
+          <div class="hidden group-hover:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-[#FF0033] shadow-[0_0_12px_#FF0033]"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="h-[68px] px-5 grid grid-cols-3 items-center gap-4">
+      <!-- LEFT: Transport Controls + Time -->
+      <div class="flex items-center gap-4">
+        <button onclick="cmdPrev()" title="Önceki (Ctrl+Sol)" class="text-white/90 hover:text-white transition cursor-pointer">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+        </button>
+        <button id="btn-play-pause" onclick="cmdTogglePause()" title="Oynat / Duraklat (Space)" class="relative w-8 h-8 flex items-center justify-center text-white hover:scale-105 transition cursor-pointer">
+          <svg id="icon-play" class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="icon-pause" class="w-8 h-8 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>
+          <svg id="icon-loading" class="w-6 h-6 hidden animate-spin text-[#FF0033]" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle><path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"></path></svg>
+        </button>
+        <button onclick="cmdNext()" title="Sonraki (Ctrl+Sağ)" class="text-white/90 hover:text-white transition cursor-pointer">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+        <span id="player-time" class="text-xs text-neutral-400 tabular-nums ml-1">0:00 / 0:00</span>
+      </div>
+
+      <!-- CENTER: Cover + Title / Artist + Like -->
+      <div class="flex items-center justify-center gap-3 min-w-0">
+        <img id="player-cover" src="" alt="" class="w-11 h-11 rounded object-cover bg-neutral-800 shrink-0" />
+        <div class="min-w-0">
+          <div id="player-title" class="text-[14px] font-medium text-white truncate"></div>
+          <div id="player-artist" class="text-[12.5px] text-neutral-400 truncate"></div>
+        </div>
+        <button id="btn-player-like" onclick="cmdLikeCurrent()" title="Beğen" class="ml-2 text-neutral-400 hover:text-white transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg>
+        </button>
+      </div>
+
+      <!-- RIGHT: Sleep Timer + Shuffle + Repeat + Volume -->
+      <div class="flex items-center justify-end gap-2.5">
+        <span id="player-quality" class="text-[11px] text-neutral-400 hidden xl:inline mr-1"></span>
+
+        <!-- Sleep Timer -->
+        <div class="relative">
+          <button id="btn-sleep" onclick="toggleSleepMenu()" title="Uyku Zamanlayıcısı" class="px-2 py-1 rounded hover:bg-white/10 text-xs text-neutral-400 hover:text-white transition cursor-pointer">🌙</button>
+          <div id="sleep-menu" class="hidden absolute bottom-10 right-0 w-44 bg-[#181818] border border-white/15 rounded-lg shadow-xl py-1.5 z-50 text-xs">
+            <div class="px-3 py-1 text-[10.5px] uppercase tracking-wider text-neutral-400">Uyku Zamanlayıcı</div>
+            <button onclick="setSleep(null, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">Kapalı</button>
+            <button onclick="setSleep(null, true)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">Bu parça bitince</button>
+            <button onclick="setSleep(15, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">15 dakika</button>
+            <button onclick="setSleep(30, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">30 dakika</button>
+            <button onclick="setSleep(45, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">45 dakika</button>
+            <button onclick="setSleep(60, false)" class="w-full text-left px-3 py-1.5 hover:bg-white/10 text-neutral-200 cursor-pointer">60 dakika</button>
+          </div>
+        </div>
+
+        <!-- Shuffle -->
+        <button id="btn-shuffle" onclick="cmdToggleShuffle()" title="Karıştır" class="p-1.5 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+        </button>
+
+        <!-- Repeat -->
+        <button id="btn-repeat" onclick="cmdCycleRepeat()" title="Tekrarla" class="relative p-1.5 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          <span id="repeat-one-badge" class="hidden absolute -top-0.5 -right-0.5 text-[9px] font-bold text-[#FF0033]">1</span>
+        </button>
+
+        <!-- Mute + Volume -->
+        <button id="btn-mute" onclick="cmdToggleMute()" title="Sesi Kapat/Aç" class="text-neutral-300 hover:text-white transition cursor-pointer ml-1">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+        </button>
+        <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="0.85" class="ytm-vol w-20 cursor-pointer" />
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

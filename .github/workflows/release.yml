@@ -1,0 +1,37 @@
+name: Release Windows Binary
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Build Windows Setup installer (Inno Setup)
+        shell: powershell
+        run: |
+          iscc installer/ytm-native.iss
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            target/release/ytm-native.exe
+            dist/YTM-Native-Setup-*.exe
+          generate_release_notes: true
