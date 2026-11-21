@@ -6034,7 +6034,7 @@ dependencies = [
 
 [[package]]
 name = "ytm-native"
-version = "1.0.0-beta"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "cpal",

@@ -1,16 +1,16 @@
 <div align="center">
-  <img src="assets/hero-banner.svg" alt="YTM Native v1.0.0" width="100%" />
+  <img src="assets/hero-banner.svg" alt="YTM Native v2.0.0" width="100%" />
 
   <br/>
 
   <p>
     <a href="https://github.com/Rbg4445/Ytmnative/releases/latest">
-      <img src="https://img.shields.io/badge/Windows-YTM--Native--Setup--1.0.0--beta.exe-FF0033?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows Setup" />
+      <img src="https://img.shields.io/badge/Windows-YTM--Native--Setup--2.0.0.exe-FF0033?style=for-the-badge&logo=windows&logoColor=white" alt="Download Windows Setup" />
     </a>
     <a href="https://github.com/Rbg4445/Ytmnative/releases/latest">
       <img src="https://img.shields.io/badge/Linux-.deb%20%26%20.tar.gz-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download Linux Package" />
     </a>
-    <img src="https://img.shields.io/badge/Release-v1.0.0--beta-111116?style=for-the-badge&logo=github" alt="v1.0.0-beta" />
+    <img src="https://img.shields.io/badge/Release-v2.0.0-111116?style=for-the-badge&logo=github" alt="v2.0.0" />
     <img src="https://img.shields.io/badge/Rust-Pure%20Audio%20Engine-DEA584?style=for-the-badge&logo=rust&logoColor=black" alt="Rust" />
     <img src="https://img.shields.io/badge/Background%20RAM-~12%20MB-10B981?style=for-the-badge" alt="~12 MB RAM" />
     <img src="https://img.shields.io/badge/Built%20with%20AI-Antigravity%20%26%20Claude-8B5CF6?style=for-the-badge" alt="Built with AI" />
@@ -74,7 +74,7 @@
 
 | File | Windows Defender | SHA-256 | VirusTotal |
 | :--- | :--- | :--- | :--- |
-| `YTM-Native-Setup-1.0.0-beta.exe` | ✅ 0 Threats | `d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3` | [VirusTotal Report](https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3/detection) |
+| `YTM-Native-Setup-2.0.0.exe` | ✅ 0 Threats | `d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3` | [VirusTotal Report](https://www.virustotal.com/gui/file/d332c2d4a3a239cee1f2785419b556d70513bac7b719555ecc29017beca692c3/detection) |
 | `ytm-native.exe` | ✅ 0 Threats | `35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8` | [VirusTotal Report](https://www.virustotal.com/gui/file/35299504705936268c40419122ed75dfd38b94d754b28cd49568486883d69eb8) |
 
 ---
@@ -82,17 +82,17 @@
 ## 📥 Installation
 
 ### Windows
-1. Download **`YTM-Native-Setup-1.0.0-beta.exe`** (or portable **`YTM-Native-1.0.0-beta-windows-x64.zip`**) from the **[Releases](https://github.com/Rbg4445/Ytmnative/releases/latest)** page.
+1. Download **`YTM-Native-Setup-2.0.0.exe`** (or portable **`YTM-Native-2.0.0-windows-x64.zip`**) from the **[Releases](https://github.com/Rbg4445/Ytmnative/releases/latest)** page.
 2. Run the installer (no admin/UAC required — installs per-user into `%LOCALAPPDATA%\YTM Native`).
 3. Future updates are checked automatically on startup and installed seamlessly.
 
 ### Linux (Debian / Ubuntu / Mint / Arch / Fedora)
 ```bash
 # Debian / Ubuntu / Linux Mint (.deb package)
-sudo apt install ./ytm-native_1.0.0-beta_amd64.deb
+sudo apt install ./ytm-native_2.0.0_amd64.deb
 
 # Universal Linux Tarball (.tar.gz)
-tar -xzf YTM-Native-1.0.0-beta-linux-x64.tar.gz
+tar -xzf YTM-Native-2.0.0-linux-x64.tar.gz
 ./ytm-native
 ```
 
@@ -134,8 +134,8 @@ iscc installer/ytm-native.iss
 Update the version in `Cargo.toml`, `tauri.conf.json`, and `installer/ytm-native.iss`, then push a tag — GitHub Actions automatically builds and publishes both `YTM-Native-Setup-*.exe` and `ytm-native.exe`:
 
 ```powershell
-git tag v1.0.0
-git push origin v1.0.0
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
 ---

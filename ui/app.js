@@ -88,7 +88,7 @@ let state = {
     stream_meta: null,
     last_error: null,
   },
-  updateStatus: { kind: "idle", version: "1.0.0-beta", info: null, message: "" },
+  updateStatus: { kind: "idle", version: "2.0.0", info: null, message: "" },
   authMsg: "",
   authErr: "",
   authBusy: false,
@@ -1077,7 +1077,7 @@ function downloadUserscript() {
   const script = `// ==UserScript==
 // @name         YTM Native — Open Links in Desktop App
 // @namespace    https://github.com/Rbg4445/Ytmnative
-// @version      1.0.0
+// @version      2.0.0
 // @description  Soft-opens actionable YouTube Music links via ytmd:// protocol
 // @match        *://music.youtube.com/*
 // @grant        GM_registerMenuCommand
