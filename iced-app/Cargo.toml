@@ -1,0 +1,48 @@
+[package]
+name = "ytm-native-iced"
+version = "9.0.0"
+edition = "2021"
+authors = ["Rbg4445 <https://github.com/Rbg4445>"]
+license = "MIT"
+description = "YTM Native 9 — native iced UI on top of the shared pure-Rust core (../src)."
+publish = false
+
+[[bin]]
+name = "ytm-native"
+path = "src/main.rs"
+
+[dependencies]
+iced = { version = "=0.13.1", features = ["image", "svg", "tokio", "advanced"] }
+image_crate = { package = "image", version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+
+# Shared core (../src) dependencies — same versions as the Tauri build
+rustypipe = { version = "0.11", features = ["userdata"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "process", "net", "io-util"] }
+futures = "0.3"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "blocking"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+symphonia = { version = "0.5", default-features = false, features = ["aac", "isomp4", "mp3", "pcm", "mkv"] }
+cpal = "0.15"
+rtrb = "0.3"
+souvlaki = "0.8"
+tray-icon = "0.25"
+raw-window-handle = "0.6"
+anyhow = "1"
+sha1 = "0.10"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[target.'cfg(windows)'.dependencies]
+# Frameless window: resize from the edges via the native WM_NCLBUTTONDOWN hit-test message
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse"] }
+
+[build-dependencies]
+winresource = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 8
+strip = false
+panic = "unwind"

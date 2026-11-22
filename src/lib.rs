@@ -1,9 +1,11 @@
 pub mod audio;
 pub mod backend;
 pub mod integrations;
+pub mod lyrics;
 pub mod media;
 pub mod model;
 pub mod queue;
+pub mod rpc;
 pub mod storage;
 pub mod updater;
 pub mod ytm;
