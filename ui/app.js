@@ -103,7 +103,7 @@ let state = {
     stream_meta: null,
     last_error: null,
   },
-  updateStatus: { kind: "idle", version: "7.0.0", info: null, message: "" },
+  updateStatus: { kind: "idle", version: "7.1.0", info: null, message: "" },
   authMsg: "",
   authErr: "",
   authBusy: false,
@@ -452,7 +452,7 @@ function renderNav() {
            ${cover ? `<img src="${esc(cover)}" loading="lazy" alt="" class="w-full h-full object-cover" />` : "♫"}
          </div>`,
         esc(pl.name),
-        `${esc(t("playlist"))} · ${pl.tracks.length} şarkı`
+        `${pl.source === "youtube" ? "YouTube" : esc(t("playlist"))} · ${pl.tracks.length} şarkı`
       );
     }
   }
@@ -583,6 +583,7 @@ function renderCardCarousel(id, tracks) {
                 } transition">
                   <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
+                <button onclick='event.stopPropagation(); startMix(${safeJson})' title="Bu şarkıdan mix başlat" class="absolute right-3 top-3 w-9 h-9 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer">${MIX_ICON}</button>
               </div>
               <div onclick="openArtist('${jsq(t.artist_id || "")}', '${jsq(primaryArtist)}')" class="mt-2 px-1 text-[12.5px] text-neutral-400 hover:text-white hover:underline truncate cursor-pointer">${esc(t.artist)}</div>
             </div>`;
@@ -633,6 +634,7 @@ function renderTrackRows(tracks, opts = {}) {
                 <div onclick="openArtist('${jsq(t.artist_id || "")}', '${jsq(primaryArtist)}')" class="text-[12.5px] text-neutral-400 hover:text-white hover:underline truncate cursor-pointer inline-block max-w-full">${esc(t.artist)}</div>
               </div>
               <div class="flex items-center gap-3 shrink-0">
+                <button onclick='startMix(${safeTrack})' title="Bu şarkıdan mix başlat" class="p-1.5 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition cursor-pointer">${MIX_ICON}</button>
                 <button onclick='toggleLikeJson(${safeTrack})' title="Beğen" class="p-1.5 rounded-full hover:bg-white/10 transition cursor-pointer ${
                   liked ? "text-(--accent)" : "text-neutral-400 hover:text-white"
                 }">
@@ -799,6 +801,63 @@ function renderMain() {
     return;
   }
 
+  if (state.page === "mix") {
+    const seeds = getMixSeeds();
+    const artists = getSidebarArtists().slice(0, 10);
+    const songCard = (tr) => {
+      const name = (tr.artist || "").split(",")[0].trim();
+      return `
+        <div onclick='startMix(${esc(JSON.stringify(tr))})' class="sm-big-card !w-auto group cursor-pointer">
+          <div class="sm-art">
+            ${tr.thumbnail_url ? `<img src="${esc(tr.thumbnail_url)}" loading="lazy" alt="" />` : ""}
+            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent"></div>
+            <div class="absolute left-3 top-3 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur text-[11px] font-semibold text-white">${MIX_ICON} Mix</div>
+            <div class="absolute left-3.5 right-3.5 bottom-3">
+              <div class="text-[16px] font-semibold leading-tight text-white line-clamp-2">${esc(tr.title)}</div>
+              <div class="text-[12px] text-white/70 truncate mt-0.5">${esc(name)} ve benzerleri</div>
+            </div>
+          </div>
+        </div>`;
+    };
+    const artistCard = (a) => `
+      <div onclick="startArtistMix('${jsq(a.id || "")}', '${jsq(a.name)}')" class="p-2.5 rounded-2xl hover:bg-white/[0.05] transition cursor-pointer text-center group">
+        <div class="relative w-full aspect-square rounded-full overflow-hidden bg-white/[0.06] mb-2.5">
+          ${a.avatar_url ? `<img src="${esc(a.avatar_url)}" loading="lazy" alt="" class="w-full h-full artist-round" />` : `<div class="w-full h-full flex items-center justify-center text-3xl font-semibold text-neutral-400">${esc(a.name.charAt(0))}</div>`}
+          <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">${MIX_ICON}</div>
+        </div>
+        <div class="text-[14px] font-semibold text-white truncate">${esc(a.name)} Mix</div>
+        <div class="text-[12px] text-neutral-400 truncate">Sanatçı radyosu</div>
+      </div>`;
+
+    main.innerHTML = `
+      <div class="mb-7">
+        <div class="sm-eyebrow">Senin için</div>
+        <h1 class="text-[28px] font-semibold mt-0.5">Mix'ler</h1>
+        <p class="text-sm text-neutral-400 mt-1 max-w-2xl">Bir karta tıkla; o şarkıdan ya da sanatçıdan sonsuz bir mix başlasın.${
+          state.ytConnected
+            ? " Mix'ler YouTube hesabına göre kişiselleştiriliyor."
+            : " Google ile giriş yaparsan mix'ler zevkine göre kişiselleşir."
+        }</p>
+      </div>
+      ${
+        seeds.length
+          ? `<section class="mb-9">
+               <h2 class="sm-h2 mb-3.5">Dinlediklerinden</h2>
+               <div class="grid grid-cols-2 @lg:grid-cols-3 @2xl:grid-cols-4 @4xl:grid-cols-5 gap-3.5">${seeds.map(songCard).join("")}</div>
+             </section>`
+          : `<p class="text-sm text-neutral-400 mb-9">Henüz mix oluşturacak dinleme geçmişin yok. Birkaç şarkı dinle ya da Google ile giriş yap.</p>`
+      }
+      ${
+        artists.length
+          ? `<section class="mb-6">
+               <h2 class="sm-h2 mb-3.5">Sanatçı mixleri</h2>
+               <div class="grid grid-cols-2 @lg:grid-cols-3 @2xl:grid-cols-4 @4xl:grid-cols-5 gap-2">${artists.map(artistCard).join("")}</div>
+             </section>`
+          : ""
+      }`;
+    return;
+  }
+
   if (state.page === "explore") {
     main.innerHTML = `
       <h1 class="text-[30px] font-bold mb-6">Keşfet</h1>
@@ -939,6 +998,9 @@ function renderMain() {
                 ? `<button onclick="playCollectionIndex(0)" class="px-6 py-2.5 rounded-full bg-(--accent) hover:bg-(--accent-strong) text-white text-sm font-bold shadow-lg transition cursor-pointer">▶ Oynat</button>`
                 : ""
             }
+            <button onclick="startArtistMix('${jsq(art.id || "")}', '${jsq(art.name)}')" class="px-5 py-2 rounded-full border border-white/25 hover:border-white text-white text-xs font-semibold transition cursor-pointer">
+              ${MIX_ICON} Mix başlat
+            </button>
             <button onclick='toggleFollowArtistObj(${safeArtistSummary})' class="px-5 py-2 rounded-full border ${
               followed
                 ? "border-(--accent) bg-(--accent)/15 text-white"
@@ -1049,7 +1111,9 @@ function renderMain() {
                 <span class="font-semibold text-white">${esc(t("accountConnected"))}</span>
               </div>
               <div class="flex gap-2">
-                <button onclick="refreshHome(true)" class="px-4 py-2 rounded-full bg-white text-black text-xs font-semibold cursor-pointer">${esc(t("syncHistory"))}</button>
+                <button ${state.syncingAccount ? "disabled" : ""} onclick="syncAccount(true)" class="px-4 py-2 rounded-full bg-white text-black text-xs font-semibold cursor-pointer disabled:opacity-60">${
+                  state.syncingAccount ? "Eşitleniyor…" : "Kitaplığı eşitle"
+                }</button>
                 <button onclick="disconnectYt()" class="px-4 py-2 rounded-full border border-white/20 text-xs text-neutral-300 hover:text-white cursor-pointer">${esc(t("disconnect"))}</button>
               </div>
             </div>`
@@ -1365,6 +1429,7 @@ function renderNowPlayingPanel() {
         <div onclick="openArtist('${jsq(artId)}', '${jsq(primaryName)}')" class="text-[14px] text-white/70 hover:text-white hover:underline truncate cursor-pointer mt-1">${esc(cur.artist)}</div>
       </div>
       <div class="flex items-center gap-0.5 shrink-0 -mr-1">
+        <button onclick='startMix(${safeTrack})' title="Bu şarkıdan mix başlat" class="w-9 h-9 rounded-full hover:bg-white/15 flex items-center justify-center cursor-pointer transition text-white">${MIX_ICON}</button>
         <button onclick='toggleFollowArtistObj(${safeArtistSummary})' title="${artFollowed ? "Takip ediliyor" : "Sanatçıyı takip et"}" class="w-9 h-9 rounded-full hover:bg-white/15 flex items-center justify-center cursor-pointer transition ${artFollowed ? "text-(--accent)" : "text-white"}">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${
             artFollowed
@@ -1936,6 +2001,77 @@ async function connectCookies() {
   renderMain();
 }
 
+// --- YOUTUBE ACCOUNT SYNC (liked songs, library playlists, library artists) ---
+
+async function syncAccount(manual = false) {
+  if (state.syncingAccount) return;
+  state.syncingAccount = true;
+  if (state.page === "account") renderMain();
+  if (manual) showBanner("YouTube kitaplığın eşitleniyor…");
+  try {
+    const r = await invoke("sync_youtube_account");
+    if (r && r.connected) {
+      await refreshLibrary();
+      if (state.page !== "home") renderMain();
+      const failed = (r.failed || []).length ? ` (alınamayan: ${r.failed.join(", ")})` : "";
+      if (manual || failed) {
+        showBanner(`✓ Eşitlendi: ${r.liked} beğenilen şarkı, ${r.playlists} çalma listesi, ${r.artists} sanatçı${failed}`, !!failed);
+        setTimeout(() => showBanner(""), 4000);
+      }
+    } else if (manual) {
+      showBanner("YouTube hesabı bağlı değil. Hesap sayfasından Google ile giriş yap.", true);
+    }
+  } catch (e) {
+    showBanner(`⚠ ${e}`, true);
+  }
+  state.syncingAccount = false;
+  if (state.page === "account") renderMain();
+}
+
+// --- MIX (radio) ---
+
+const MIX_ICON = `<svg class="inline w-4 h-4 -mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.9 19.1a10 10 0 0 1 0-14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4M19.1 4.9a10 10 0 0 1 0 14.2"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>`;
+
+async function startMix(track) {
+  if (!track || !track.id) return;
+  showBanner(`🎶 "${track.title}" mixi hazırlanıyor…`);
+  try {
+    const n = await invoke("start_mix", { track });
+    showBanner(`🎶 "${track.title}" mixi başladı · ${n} şarkı`);
+    setTimeout(() => showBanner(""), 2500);
+    await syncPlayback();
+  } catch (e) {
+    showBanner(`⚠ ${e}`, true);
+  }
+}
+
+async function startArtistMix(artistId, artistName) {
+  showBanner(`🎶 ${artistName} mixi hazırlanıyor…`);
+  try {
+    const n = await invoke("start_artist_mix", { artistId: artistId || "", artistName: artistName || null });
+    showBanner(`🎶 ${artistName} mixi başladı · ${n} şarkı`);
+    setTimeout(() => showBanner(""), 2500);
+    await syncPlayback();
+  } catch (e) {
+    showBanner(`⚠ ${e}`, true);
+  }
+}
+
+// Mix seeds for the "Mix" page: your history first, then liked and recently played.
+function getMixSeeds() {
+  const pool = [...(state.ytHistory || []), ...(state.library.liked_tracks || []), ...(state.library.recently_played || [])];
+  const seenArtists = new Set();
+  const out = [];
+  for (const t of pool) {
+    const artist = (t.artist || "").split(",")[0].trim().toLowerCase();
+    if (!t.id || seenArtists.has(artist)) continue; // one mix per artist keeps them varied
+    seenArtists.add(artist);
+    out.push(t);
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
 async function loginWithGoogle() {
   state.authBusy = true;
   state.authErr = "";
@@ -1945,7 +2081,7 @@ async function loginWithGoogle() {
     const ok = await invoke("open_google_login");
     if (ok) {
       state.ytConnected = true;
-      state.authMsg = "✓ Google hesabın bağlandı! YouTube geçmişin ve önerilerin eşitlendi.";
+      state.authMsg = "✓ Google hesabın bağlandı! Beğenilerin, çalma listelerin ve sanatçıların kitaplığa aktarıldı.";
       await refreshLibrary();
       await refreshHome();
     } else {
@@ -2422,6 +2558,11 @@ function changeLanguage(lang) {
   renderNav();
   renderMain();
   renderNowPlayingPanel();
-  refreshHome();
+  // After the home feed confirms the account, refresh liked songs / playlists / artists
+  // from YouTube in the background (at most every 30 minutes).
+  refreshHome().then(() => {
+    const age = Date.now() / 1000 - (state.library.yt_last_sync || 0);
+    if (state.ytConnected && age > 1800) syncAccount(false);
+  });
   runAutoUpdateOnStartup();
 })();

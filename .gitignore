@@ -27,3 +27,7 @@ node_modules/
 *.new
 .DS_Store
 Thumbs.db
+
+# iced UI prototype build output
+/proto-iced/target/
+/proto-iced/rustypipe_cache.json

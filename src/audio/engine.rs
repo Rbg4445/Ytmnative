@@ -496,6 +496,16 @@ fn play_hls_stream(
     let mut paused = false;
     let mut started_sink = false;
     let mut resampled: Vec<f32> = Vec::with_capacity(8192);
+    // Next segment downloading in the background while the current one plays,
+    // so segment boundaries never wait on the network.
+    let mut prefetched: Option<(usize, thread::JoinHandle<Result<Vec<u8>>>)> = None;
+    let spawn_segment_fetch = |idx: usize| {
+        let client = client.clone();
+        let url = segments[idx].url.clone();
+        let ua = info.user_agent.clone();
+        let cancel = Arc::clone(&cancel_flag);
+        thread::spawn(move || fetch_segment_bytes(&client, &url, ua.as_deref(), &cancel))
+    };
 
     while seg_idx < segments.len() {
         if cancel_flag.load(Ordering::Relaxed) {
@@ -553,13 +563,28 @@ fn play_hls_stream(
             }
         }
 
-        // Fetch single ~115 KB HLS segment (strictly bounded RAM!)
-        let seg_bytes = fetch_segment_bytes(
-            &client,
-            &segments[seg_idx].url,
-            info.user_agent.as_deref(),
-            &cancel_flag,
-        )?;
+        // Take the ~115 KB segment from the background download if it is the right one
+        // (after a seek it may not be), otherwise fetch it now. Then start the next one.
+        let seg_bytes = match prefetched.take() {
+            Some((idx, handle)) if idx == seg_idx => match handle.join() {
+                Ok(Ok(bytes)) => bytes,
+                _ => fetch_segment_bytes(
+                    &client,
+                    &segments[seg_idx].url,
+                    info.user_agent.as_deref(),
+                    &cancel_flag,
+                )?,
+            },
+            _ => fetch_segment_bytes(
+                &client,
+                &segments[seg_idx].url,
+                info.user_agent.as_deref(),
+                &cancel_flag,
+            )?,
+        };
+        if seg_idx + 1 < segments.len() {
+            prefetched = Some((seg_idx + 1, spawn_segment_fetch(seg_idx + 1)));
+        }
 
         let mss = MediaSourceStream::new(Box::new(Cursor::new(seg_bytes)), Default::default());
         let mut hint = Hint::new();

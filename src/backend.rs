@@ -46,6 +46,54 @@ pub struct HomeFeedDto {
     pub recommendations: Vec<Track>,
 }
 
+/// Result of a YouTube account sync, shown to the user.
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct AccountSyncReport {
+    pub connected: bool,
+    pub liked: usize,
+    pub playlists: usize,
+    pub artists: usize,
+    /// Parts that could not be fetched (e.g. "playlists"); empty when everything worked.
+    pub failed: Vec<String>,
+}
+
+/// Pull liked songs, library playlists and library artists from the signed-in account
+/// and merge them into the local library.
+async fn run_account_sync(ctrl: &AppController) -> Result<AccountSyncReport, String> {
+    if !ctrl.ytm.is_youtube_connected().await {
+        return Ok(AccountSyncReport::default());
+    }
+    let snap = ctrl.ytm.fetch_account_snapshot().await;
+    let mut failed = Vec::new();
+    if snap.liked.is_none() {
+        failed.push("liked".to_string());
+    }
+    if snap.playlists.is_none() {
+        failed.push("playlists".to_string());
+    }
+    if snap.artists.is_none() {
+        failed.push("artists".to_string());
+    }
+    if failed.len() == 3 {
+        return Err(
+            "YouTube hesabından veri alınamadı. Oturum süresi dolmuş olabilir; çıkış yapıp tekrar Google ile giriş yap."
+                .to_string(),
+        );
+    }
+    let (liked, playlists, artists) = ctrl
+        .library
+        .lock()
+        .map(|mut lib| lib.apply_account_sync(snap.liked, snap.playlists, snap.artists))
+        .map_err(|_| "Kitaplık kilitlenemedi".to_string())?;
+    Ok(AccountSyncReport {
+        connected: true,
+        liked,
+        playlists,
+        artists,
+        failed,
+    })
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct LyricsDto {
     pub body: String,
@@ -128,6 +176,9 @@ impl AppController {
         if let Ok(mut lib) = self.library.lock() {
             lib.record_played(&track);
         }
+        if let Ok(mut q) = self.queue.lock() {
+            q.note_played(&track);
+        }
         if let Ok(mut m) = self.media.lock() {
             m.set_track(&track);
         }
@@ -186,18 +237,36 @@ impl AppController {
         }
     }
 
+    /// Top up autoplay. Radio of the current song first; if that brings too few NEW songs
+    /// (radios of songs deep in a chain keep circling the same tracks), also use the song
+    /// the session started from.
     pub fn spawn_radio_refill(self: &Arc<Self>, seed_id: String) {
+        const MIN_NEW: usize = 8;
         let ctrl = Arc::clone(self);
         tauri::async_runtime::spawn(async move {
-            match ctrl.ytm.fetch_radio(&seed_id).await {
-                Ok(tracks) if !tracks.is_empty() => {
-                    if let Ok(mut q) = ctrl.queue.lock() {
-                        q.append_radio(tracks);
-                    }
-                    ctrl.spawn_prefetch_upcoming();
+            let origin = ctrl.queue.lock().ok().and_then(|q| q.origin_seed());
+            let mut seeds = vec![seed_id];
+            if let Some(o) = origin {
+                if o != seeds[0] {
+                    seeds.push(o);
                 }
-                Ok(_) => {}
-                Err(e) => warn!("Radio refill failed: {e}"),
+            }
+            let mut added = 0;
+            for seed in seeds {
+                match ctrl.ytm.fetch_radio(&seed).await {
+                    Ok(tracks) => {
+                        if let Ok(mut q) = ctrl.queue.lock() {
+                            added += q.append_radio(tracks);
+                        }
+                    }
+                    Err(e) => warn!("Radio refill from {seed} failed: {e}"),
+                }
+                if added >= MIN_NEW {
+                    break;
+                }
+            }
+            if added > 0 {
+                ctrl.spawn_prefetch_upcoming();
             }
         });
     }
@@ -901,6 +970,53 @@ pub fn remove_from_playlist(
     }
 }
 
+/// Re-sync liked songs, playlists and artists from the YouTube account (startup + "Eşitle" button).
+#[tauri::command]
+pub async fn sync_youtube_account(
+    ctrl: State<'_, Arc<AppController>>,
+) -> Result<AccountSyncReport, String> {
+    run_account_sync(&ctrl).await
+}
+
+fn play_list_now(ctrl: &Arc<AppController>, tracks: Vec<Track>) -> usize {
+    let n = tracks.len();
+    let first = ctrl.queue.lock().ok().and_then(|mut q| {
+        q.start_with_list(tracks, 0);
+        q.current().cloned()
+    });
+    if let Some(track) = first {
+        ctrl.trigger_play_track(track);
+    }
+    n
+}
+
+/// "Mix başlat" for a song: the song followed by its (personalized) radio.
+#[tauri::command]
+pub async fn start_mix(ctrl: State<'_, Arc<AppController>>, track: Track) -> Result<usize, String> {
+    let radio = ctrl.ytm.fetch_radio(&track.id).await.unwrap_or_default();
+    let mut list = vec![track];
+    list.extend(radio);
+    Ok(play_list_now(&ctrl, list))
+}
+
+/// "Mix başlat" for an artist: YouTube's artist radio.
+#[tauri::command]
+pub async fn start_artist_mix(
+    ctrl: State<'_, Arc<AppController>>,
+    artist_id: String,
+    artist_name: Option<String>,
+) -> Result<usize, String> {
+    let list = ctrl
+        .ytm
+        .fetch_artist_mix(&artist_id, artist_name.as_deref())
+        .await
+        .map_err(|e| format!("Mix başlatılamadı: {e}"))?;
+    if list.is_empty() {
+        return Err("Bu sanatçı için mix bulunamadı".to_string());
+    }
+    Ok(play_list_now(&ctrl, list))
+}
+
 #[tauri::command]
 pub async fn connect_yt_browser(
     ctrl: State<'_, Arc<AppController>>,
@@ -915,15 +1031,8 @@ pub async fn connect_yt_browser(
         lib.auth_cookie = Some(cookie);
         lib.save();
     }
-    if let Ok(liked) = ctrl.ytm.fetch_yt_liked().await {
-        if let Ok(mut lib) = ctrl.library.lock() {
-            for t in liked.into_iter().rev() {
-                if !lib.is_liked(&t.id) {
-                    lib.liked_tracks.insert(0, t);
-                }
-            }
-            lib.save();
-        }
+    if let Err(e) = run_account_sync(&ctrl).await {
+        warn!("Account sync after connect failed: {e}");
     }
     Ok(())
 }
@@ -942,15 +1051,8 @@ pub async fn connect_yt_cookies(
         lib.auth_cookie = Some(cookie);
         lib.save();
     }
-    if let Ok(liked) = ctrl.ytm.fetch_yt_liked().await {
-        if let Ok(mut lib) = ctrl.library.lock() {
-            for t in liked.into_iter().rev() {
-                if !lib.is_liked(&t.id) {
-                    lib.liked_tracks.insert(0, t);
-                }
-            }
-            lib.save();
-        }
+    if let Err(e) = run_account_sync(&ctrl).await {
+        warn!("Account sync after connect failed: {e}");
     }
     Ok(())
 }
@@ -992,10 +1094,12 @@ pub async fn open_google_login(
             return Ok(false);
         };
 
+        // Only the final music.youtube.com page counts. Intermediate hops such as
+        // accounts.youtube.com also contain "youtube.com" but do not have the full session yet.
         let on_ytm = win
             .url()
             .ok()
-            .and_then(|u| u.host_str().map(|h| h.contains("youtube.com")))
+            .and_then(|u| u.host_str().map(|h| h == "music.youtube.com"))
             .unwrap_or(false);
 
         if on_ytm {
@@ -1024,15 +1128,8 @@ pub async fn open_google_login(
                         lib.save();
                     }
 
-                    if let Ok(liked) = ctrl.ytm.fetch_yt_liked().await {
-                        if let Ok(mut lib) = ctrl.library.lock() {
-                            for t in liked.into_iter().rev() {
-                                if !lib.is_liked(&t.id) {
-                                    lib.liked_tracks.insert(0, t);
-                                }
-                            }
-                            lib.save();
-                        }
+                    if let Err(e) = run_account_sync(&ctrl).await {
+                        warn!("Account sync after Google login failed: {e}");
                     }
                     return Ok(true);
                 }

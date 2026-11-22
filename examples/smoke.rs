@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
 
     println!("=== YTM Native Smoke Test ===");
     println!("[1/4] İstemci başlatılıyor...");
-    let client = YtmClient::new()?;
+    let client = YtmClient::new(None)?;
 
     let t0 = Instant::now();
     println!("[2/4] YouTube Music araması: \"{query}\"");

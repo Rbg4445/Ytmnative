@@ -49,6 +49,9 @@ pub struct Playlist {
     pub id: String,
     pub name: String,
     pub tracks: Vec<Track>,
+    /// `Some("youtube")` for playlists synced from the YouTube Music account, `None` for local ones.
+    #[serde(default)]
+    pub source: Option<String>,
 }
 
 impl Track {

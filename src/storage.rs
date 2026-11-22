@@ -59,6 +59,13 @@ pub struct LibraryData {
     /// Active built-in theme preset name (ytmdesktop2 feature).
     #[serde(default)]
     pub theme_preset: String,
+    /// Ids of liked songs that came from the YouTube account at the last sync. Lets a re-sync
+    /// drop songs unliked on YouTube while keeping songs liked only inside this app.
+    #[serde(default)]
+    pub yt_liked_ids: Vec<String>,
+    /// Unix seconds of the last successful account sync (0 = never).
+    #[serde(default)]
+    pub yt_last_sync: u64,
 }
 
 fn default_volume() -> f32 {
@@ -95,6 +102,8 @@ impl Default for LibraryData {
             lastfm_secret: String::new(),
             lastfm_session_key: String::new(),
             theme_preset: String::new(),
+            yt_liked_ids: Vec::new(),
+            yt_last_sync: 0,
         }
     }
 }
@@ -180,6 +189,7 @@ impl LibraryData {
             id: id.clone(),
             name: final_name,
             tracks: Vec::new(),
+            source: None,
         });
         self.save();
         id
@@ -206,6 +216,64 @@ impl LibraryData {
             pl.tracks.retain(|t| t.id != track_id);
             self.save();
         }
+    }
+
+    /// Merge a fresh YouTube account snapshot into the library.
+    /// - Liked: YouTube order first, then songs liked only in this app. Songs that were synced
+    ///   before but are no longer liked on YouTube are removed.
+    /// - Playlists: synced ("youtube") playlists are replaced; local playlists are kept.
+    /// - Artists: YouTube library artists are added to the followed list (no duplicates).
+    /// A `None` part means that fetch failed, and the existing data is left untouched.
+    pub fn apply_account_sync(
+        &mut self,
+        liked: Option<Vec<Track>>,
+        playlists: Option<Vec<Playlist>>,
+        artists: Option<Vec<ArtistSummary>>,
+    ) -> (usize, usize, usize) {
+        let mut counts = (0, 0, 0);
+
+        if let Some(yt_liked) = liked {
+            let prev_synced: std::collections::HashSet<String> =
+                self.yt_liked_ids.iter().cloned().collect();
+            let yt_ids: std::collections::HashSet<String> =
+                yt_liked.iter().map(|t| t.id.clone()).collect();
+            let local_only: Vec<Track> = self
+                .liked_tracks
+                .iter()
+                .filter(|t| !yt_ids.contains(&t.id) && !prev_synced.contains(&t.id))
+                .cloned()
+                .collect();
+            counts.0 = yt_liked.len();
+            self.yt_liked_ids = yt_liked.iter().map(|t| t.id.clone()).collect();
+            let mut merged = local_only;
+            merged.extend(yt_liked);
+            self.liked_tracks = merged;
+        }
+
+        if let Some(yt_playlists) = playlists {
+            counts.1 = yt_playlists.len();
+            self.playlists.retain(|p| p.source.as_deref() != Some("youtube"));
+            self.playlists.extend(yt_playlists);
+        }
+
+        if let Some(yt_artists) = artists {
+            counts.2 = yt_artists.len();
+            for a in yt_artists {
+                let dup = self.followed_artists.iter().any(|f| {
+                    (!a.id.is_empty() && f.id == a.id) || f.name.eq_ignore_ascii_case(&a.name)
+                });
+                if !dup {
+                    self.followed_artists.push(a);
+                }
+            }
+        }
+
+        self.yt_last_sync = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        self.save();
+        counts
     }
 
     pub fn toggle_follow_artist(&mut self, artist: &ArtistSummary) -> bool {

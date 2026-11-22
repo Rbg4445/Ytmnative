@@ -1,13 +1,15 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context, Result};
-use futures::FutureExt;
+use futures::future::{BoxFuture, Shared};
+use futures::{FutureExt, StreamExt};
 use reqwest::header::USER_AGENT;
-use rustypipe::client::{ClientType, RustyPipe, RustyPipeBuilder};
+use rustypipe::client::{ClientType, RustyPipe, RustyPipeBuilder, RustyPipeQuery};
 use rustypipe::model::{ArtistItem, TrackItem};
 use sha1::{Digest, Sha1};
 use tokio::process::Command;
@@ -15,12 +17,22 @@ use tokio::sync::Mutex;
 use tracing::{debug, warn};
 
 use crate::model::{
-    ArtistDetailDto, ArtistSummary, HlsSegment, ResolvedStream, SearchBundleDto, StreamKind,
-    StreamSource, Track,
+    ArtistDetailDto, ArtistSummary, HlsSegment, Playlist, ResolvedStream, SearchBundleDto,
+    StreamKind, StreamSource, Track,
 };
+
+/// Everything pulled from the signed-in YouTube Music account in one sync.
+pub struct AccountSnapshot {
+    pub liked: Option<Vec<Track>>,
+    pub playlists: Option<Vec<Playlist>>,
+    pub artists: Option<Vec<ArtistSummary>>,
+}
 
 /// Maximum number of pre-resolved stream URLs kept in RAM (supports hover-prefetch + next 2 tracks).
 const STREAM_CACHE_CAP: usize = 12;
+
+/// A stream resolution that is already running; later callers for the same video await it.
+type InflightResolve = Shared<BoxFuture<'static, std::result::Result<ResolvedStream, String>>>;
 
 #[derive(Clone)]
 pub struct YtmClient {
@@ -29,6 +41,11 @@ pub struct YtmClient {
     stream_cache: Arc<Mutex<VecDeque<ResolvedStream>>>,
     visitor_data: Arc<Mutex<Option<String>>>,
     raw_cookie: Arc<Mutex<Option<String>>>,
+    /// Last known result of the account check; decides whether radio/mix requests are sent
+    /// with the user's session (personalized) or anonymously.
+    auth_ok: Arc<AtomicBool>,
+    /// Resolutions in progress (hover/upcoming prefetch + click on the same song share one).
+    inflight: Arc<std::sync::Mutex<HashMap<String, InflightResolve>>>,
 }
 
 impl YtmClient {
@@ -51,6 +68,8 @@ impl YtmClient {
             stream_cache: Arc::new(Mutex::new(VecDeque::with_capacity(STREAM_CACHE_CAP))),
             visitor_data: Arc::new(Mutex::new(None)),
             raw_cookie: Arc::new(Mutex::new(initial_cookie)),
+            auth_ok: Arc::new(AtomicBool::new(false)),
+            inflight: Arc::new(std::sync::Mutex::new(HashMap::new())),
         })
     }
 
@@ -58,9 +77,30 @@ impl YtmClient {
         self.raw_cookie.lock().await.clone()
     }
 
-    /// Check whether a valid YouTube cookie session is stored in RustyPipe.
+    /// Check whether a valid YouTube cookie session is available.
+    /// If RustyPipe's own cache lost the cookie but library.json still has it, re-apply it.
     pub async fn is_youtube_connected(&self) -> bool {
-        Self::safe_rp(self.rp.user_auth_check_cookie()).await.is_ok()
+        let mut ok = Self::safe_rp(self.rp.user_auth_check_cookie()).await.is_ok();
+        if !ok {
+            let saved = self.raw_cookie.lock().await.clone();
+            if let Some(cookie) = saved.filter(|c| !c.trim().is_empty()) {
+                ok = Self::safe_rp(self.rp.user_auth_set_cookie(cookie)).await.is_ok()
+                    && Self::safe_rp(self.rp.user_auth_check_cookie()).await.is_ok();
+            }
+        }
+        self.auth_ok.store(ok, Ordering::Relaxed);
+        ok
+    }
+
+    /// Query that carries the user's session when an account is connected, so radios and
+    /// mixes are personalized like on music.youtube.com (anonymous otherwise).
+    fn user_query(&self) -> RustyPipeQuery {
+        let q = self.rp.query();
+        if self.auth_ok.load(Ordering::Relaxed) {
+            q.authenticated()
+        } else {
+            q
+        }
     }
 
     /// Connect YouTube account using either Netscape cookies.txt content or a raw Cookie header.
@@ -86,6 +126,7 @@ impl YtmClient {
             let mut guard = self.raw_cookie.lock().await;
             *guard = Some(header_cookie.clone());
         }
+        self.auth_ok.store(true, Ordering::Relaxed);
         Ok(header_cookie)
     }
 
@@ -133,35 +174,106 @@ impl YtmClient {
         let _ = Self::safe_rp(self.rp.user_auth_remove_cookie()).await;
         let mut guard = self.raw_cookie.lock().await;
         *guard = None;
+        self.auth_ok.store(false, Ordering::Relaxed);
         Ok(())
     }
 
     /// Fetch the user's real YouTube Music listening history (requires connected YouTube account).
     pub async fn fetch_yt_history(&self) -> Result<Vec<Track>> {
-        let paginator = Self::safe_rp(self.rp.query().music_history()).await?;
+        let q = self.rp.query().authenticated();
+        let mut paginator = Self::safe_rp(q.music_history()).await?;
+        let _ = Self::safe_rp(paginator.extend_limit(&q, 60)).await;
         let mut seen = std::collections::HashSet::new();
         let mut tracks = Vec::new();
         for h in paginator.items {
             if seen.insert(h.item.id.clone()) {
                 tracks.push(track_from_item(h.item));
             }
-            if tracks.len() >= 30 {
+            if tracks.len() >= 40 {
                 break;
             }
         }
         Ok(tracks)
     }
 
-    /// Fetch the user's real YouTube Music liked songs (requires connected YouTube account).
+    /// Fetch ALL of the user's liked songs (follows pagination; previously only the first 50).
     pub async fn fetch_yt_liked(&self) -> Result<Vec<Track>> {
-        let pl = Self::safe_rp(self.rp.query().music_liked_tracks()).await?;
-        Ok(pl
-            .tracks
+        let q = self.rp.query().authenticated();
+        let mut pl = Self::safe_rp(q.music_liked_tracks()).await?;
+        if let Err(e) = Self::safe_rp(pl.tracks.extend_limit(&q, 2000)).await {
+            warn!("Liked songs: could not load all pages: {e}");
+        }
+        Ok(pl.tracks.items.into_iter().map(track_from_item).collect())
+    }
+
+    /// Fetch the playlists in the user's YouTube Music library, with their tracks.
+    /// Ids are prefixed with "yt:" so they never collide with local playlists.
+    pub async fn fetch_yt_playlists(&self) -> Result<Vec<Playlist>> {
+        let q = self.rp.query().authenticated();
+        let mut saved = Self::safe_rp(q.music_saved_playlists()).await?;
+        let _ = Self::safe_rp(saved.extend_limit(&q, 200)).await;
+
+        let items: Vec<_> = saved
             .items
             .into_iter()
-            .take(50)
-            .map(track_from_item)
-            .collect())
+            // "LM" = liked songs (synced separately), "SE" = saved episodes
+            .filter(|p| !p.is_podcast && p.id != "LM" && p.id != "SE")
+            .take(80)
+            .collect();
+
+        let jobs = items.into_iter().map(|item| {
+            let q = q.clone();
+            async move {
+                let mut pl = match Self::safe_rp(q.music_playlist(&item.id)).await {
+                    Ok(pl) => pl,
+                    Err(e) => {
+                        warn!("Playlist {} could not be loaded: {e}", item.id);
+                        return None;
+                    }
+                };
+                let _ = Self::safe_rp(pl.tracks.extend_limit(&q, 500)).await;
+                Some(Playlist {
+                    id: format!("yt:{}", item.id),
+                    name: item.name,
+                    tracks: pl.tracks.items.into_iter().map(track_from_item).collect(),
+                    source: Some("youtube".to_string()),
+                })
+            }
+        });
+        let loaded: Vec<Option<Playlist>> = futures::stream::iter(jobs).buffered(4).collect().await;
+        Ok(loaded.into_iter().flatten().collect())
+    }
+
+    /// Fetch the artists in the user's YouTube Music library.
+    pub async fn fetch_yt_artists(&self) -> Result<Vec<ArtistSummary>> {
+        let q = self.rp.query().authenticated();
+        let mut saved = Self::safe_rp(q.music_saved_artists()).await?;
+        let _ = Self::safe_rp(saved.extend_limit(&q, 300)).await;
+        Ok(saved.items.into_iter().map(artist_from_item).collect())
+    }
+
+    /// Pull liked songs, library playlists and library artists in parallel.
+    /// Each part is `None` when it failed, so a partial failure never wipes existing data.
+    pub async fn fetch_account_snapshot(&self) -> AccountSnapshot {
+        let (liked, playlists, artists) = tokio::join!(
+            self.fetch_yt_liked(),
+            self.fetch_yt_playlists(),
+            self.fetch_yt_artists()
+        );
+        for (what, err) in [
+            ("liked", liked.as_ref().err()),
+            ("playlists", playlists.as_ref().err()),
+            ("artists", artists.as_ref().err()),
+        ] {
+            if let Some(e) = err {
+                warn!("Account sync ({what}) failed: {e}");
+            }
+        }
+        AccountSnapshot {
+            liked: liked.ok(),
+            playlists: playlists.ok(),
+            artists: artists.ok(),
+        }
     }
 
     /// Execute a RustyPipe future with panic protection (guards against upstream offline panics).
@@ -375,16 +487,60 @@ impl YtmClient {
     }
 
     /// Fetch YouTube Music auto-radio queue for a seed track ID.
+    /// Uses the signed-in session when available, so the mix follows the user's taste.
     pub async fn fetch_radio(&self, video_id: &str) -> Result<Vec<Track>> {
-        let paginator = Self::safe_rp(self.rp.query().music_radio_track(video_id)).await?;
+        let q = self.user_query();
+        let mut paginator = match Self::safe_rp(q.music_radio_track(video_id)).await {
+            Ok(p) => p,
+            // A stale session must not break playback: retry anonymously.
+            Err(_) if self.auth_ok.load(Ordering::Relaxed) => {
+                Self::safe_rp(self.rp.query().music_radio_track(video_id)).await?
+            }
+            Err(e) => return Err(e),
+        };
+        let _ = Self::safe_rp(paginator.extend_limit(&q, 40)).await;
         let tracks = paginator
             .items
             .into_iter()
             .filter(|t| t.id != video_id)
-            .take(25)
+            .take(40)
             .map(track_from_item)
             .collect();
         Ok(tracks)
+    }
+
+    /// An artist "mix": YouTube's artist radio when the artist page offers one,
+    /// otherwise a radio seeded from the artist's top song.
+    pub async fn fetch_artist_mix(&self, artist_id: &str, artist_name: Option<&str>) -> Result<Vec<Track>> {
+        let q = self.user_query();
+        let id = artist_id.trim();
+        if !id.is_empty() {
+            if let Ok(artist) = Self::safe_rp(q.music_artist(id, false)).await {
+                if let Some(radio_id) = artist.radio_id.as_deref() {
+                    if let Ok(mut pag) = Self::safe_rp(q.music_radio(radio_id)).await {
+                        let _ = Self::safe_rp(pag.extend_limit(&q, 40)).await;
+                        if !pag.items.is_empty() {
+                            return Ok(pag.items.into_iter().take(50).map(track_from_item).collect());
+                        }
+                    }
+                }
+                if let Some(top) = artist.tracks.into_iter().next() {
+                    let mut out = vec![track_from_item(top.clone())];
+                    out.extend(self.fetch_radio(&top.id).await.unwrap_or_default());
+                    return Ok(out);
+                }
+            }
+        }
+        let name = artist_name.unwrap_or(id);
+        let top = self
+            .search_songs(name)
+            .await?
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow!("Sanatçı için şarkı bulunamadı"))?;
+        let mut out = vec![top.clone()];
+        out.extend(self.fetch_radio(&top.id).await.unwrap_or_default());
+        Ok(out)
     }
 
     /// Fetch YouTube Music song lyrics (body, source footer).
@@ -397,144 +553,118 @@ impl YtmClient {
         Ok(Some((lyrics.body, lyrics.footer)))
     }
 
-    /// Fetch personalized Home recommendations in parallel:
-    /// 1) Real YouTube Music listening history seeds (only when logged in),
-    /// 2) Local recently played + liked seeds,
-    /// 3) YouTube Music trending/new & rotated discovery fallback.
-    /// When `refresh_nonce > 0` or `exclude_ids` is provided, rotates seeds and
-    /// prioritizes unseen tracks so clicking "Yenile" always delivers fresh picks.
+    /// Build Home recommendations from the user's own taste:
+    /// 1) seeds = YouTube Music history (when signed in), then local recent + liked songs;
+    /// 2) 4 seeds (rotated by `refresh_nonce`) each start a radio; when signed in these radios
+    ///    are personalized by YouTube;
+    /// 3) the radios are interleaved so no single seed dominates the list.
+    /// Generic fallbacks (charts / new releases) are used ONLY when there are no seeds at all;
+    /// the old fixed genre searches produced unrelated songs and are gone.
     pub async fn fetch_home_feed(
         &self,
         local_seed_ids: &[String],
         exclude_ids: &[String],
         refresh_nonce: u64,
     ) -> (Vec<Track>, Vec<Track>) {
+        const SEEDS_PER_REFRESH: usize = 4;
+        const MAX_RECS: usize = 30;
+
         let yt_history = if self.is_youtube_connected().await {
             self.fetch_yt_history().await.unwrap_or_default()
         } else {
             Vec::new()
         };
 
-        // Build a diverse pool of seed track IDs from YT history + local recent/liked
+        // Seed pool: history first (most recent taste), then local recent/liked.
         let mut seed_pool: Vec<String> = Vec::new();
         let mut pool_seen = std::collections::HashSet::new();
-        for t in yt_history.iter().take(16) {
-            if pool_seen.insert(t.id.clone()) {
-                seed_pool.push(t.id.clone());
-            }
-        }
-        for id in local_seed_ids.iter().take(16) {
+        for id in yt_history
+            .iter()
+            .take(20)
+            .map(|t| &t.id)
+            .chain(local_seed_ids.iter().take(20))
+        {
             if pool_seen.insert(id.clone()) {
                 seed_pool.push(id.clone());
             }
         }
 
-        // Rotate which 2 seeds we pick based on refresh_nonce so each refresh explores new mixes
         let mut seeds: Vec<String> = Vec::new();
         if !seed_pool.is_empty() {
             let len = seed_pool.len();
-            let start = ((refresh_nonce as usize) * 2) % len;
-            seeds.push(seed_pool[start].clone());
-            if len > 1 {
-                seeds.push(seed_pool[(start + 1) % len].clone());
+            let start = (refresh_nonce as usize * SEEDS_PER_REFRESH) % len;
+            for i in 0..SEEDS_PER_REFRESH.min(len) {
+                seeds.push(seed_pool[(start + i) % len].clone());
             }
         }
 
         let exclude_set: std::collections::HashSet<&str> =
             exclude_ids.iter().map(|s| s.as_str()).collect();
+        // Songs already shown in "listen again" are pushed to the back, not repeated up front.
+        let history_set: std::collections::HashSet<&str> =
+            yt_history.iter().map(|t| t.id.as_str()).collect();
 
+        let mut seen: std::collections::HashSet<String> = seeds.iter().cloned().collect();
         let mut fresh_recs = Vec::new();
         let mut fallback_recs = Vec::new();
-        let mut seen = std::collections::HashSet::new();
-        for s in &seeds {
-            seen.insert(s.clone());
-        }
 
         if !seeds.is_empty() {
-            let futs = seeds.iter().map(|s| self.fetch_radio(s));
-            let results = futures::future::join_all(futs).await;
-            for res in results {
-                if let Ok(radio) = res {
-                    for t in radio {
-                        if !seen.insert(t.id.clone()) {
-                            continue;
-                        }
-                        if exclude_set.contains(t.id.as_str()) {
-                            fallback_recs.push(t);
-                        } else {
-                            fresh_recs.push(t);
-                        }
+            let radios: Vec<Vec<Track>> = futures::future::join_all(seeds.iter().map(|s| self.fetch_radio(s)))
+                .await
+                .into_iter()
+                .map(|r| r.unwrap_or_default())
+                .collect();
+
+            // Round-robin interleave: 1st of each radio, then 2nd of each, ...
+            let longest = radios.iter().map(|r| r.len()).max().unwrap_or(0);
+            for i in 0..longest {
+                for radio in &radios {
+                    let Some(t) = radio.get(i) else { continue };
+                    if !seen.insert(t.id.clone()) {
+                        continue;
+                    }
+                    if exclude_set.contains(t.id.as_str()) || history_set.contains(t.id.as_str()) {
+                        fallback_recs.push(t.clone());
+                    } else {
+                        fresh_recs.push(t.clone());
+                    }
+                }
+            }
+        } else {
+            // Brand-new user with no history and no likes: popular music as a starting point.
+            let charts = Self::safe_rp(self.rp.query().music_charts(None)).await.ok();
+            let mut extra: Vec<Track> = charts
+                .map(|c| {
+                    c.top_tracks
+                        .into_iter()
+                        .chain(c.trending_tracks)
+                        .map(track_from_item)
+                        .collect()
+                })
+                .unwrap_or_default();
+            if extra.is_empty() {
+                extra = Self::safe_rp(self.rp.query().music_new_videos())
+                    .await
+                    .map(|items| items.into_iter().map(track_from_item).collect())
+                    .unwrap_or_default();
+            }
+            for t in extra {
+                if seen.insert(t.id.clone()) {
+                    if exclude_set.contains(t.id.as_str()) {
+                        fallback_recs.push(t);
+                    } else {
+                        fresh_recs.push(t);
                     }
                 }
             }
         }
 
-        // If user has little/no history or clicked refresh repeatedly and exhausted first-hop radio,
-        // pull fresh discovery picks rotated by refresh_nonce.
-        if fresh_recs.len() < 12 {
-            let discovery_queries = [
-                "türkçe pop hit",
-                "en çok dinlenen şarkılar 2026",
-                "türkçe rap trap hit",
-                "chill lofi türkçe indie",
-                "türkçe rock alternatif",
-                "global top hits music",
-                "elektronik deep house mix",
-                "akustik sakin şarkılar",
-            ];
-            let extra = if refresh_nonce == 0 && seeds.is_empty() {
-                Self::safe_rp(self.rp.query().music_new_videos())
-                    .await
-                    .map(|items| items.into_iter().take(20).map(track_from_item).collect::<Vec<_>>())
-                    .unwrap_or_default()
-            } else {
-                let q = discovery_queries[(refresh_nonce as usize) % discovery_queries.len()];
-                self.search_songs(q).await.unwrap_or_default()
-            };
-            for t in extra {
-                if !seen.insert(t.id.clone()) {
-                    continue;
-                }
-                if exclude_set.contains(t.id.as_str()) {
-                    fallback_recs.push(t);
-                } else {
-                    fresh_recs.push(t);
-                }
+        let mut recs: Vec<Track> = fresh_recs.into_iter().take(MAX_RECS).collect();
+        for t in fallback_recs {
+            if recs.len() >= MAX_RECS {
+                break;
             }
-        }
-
-        // Shuffle fresh picks lightly using a fast xorshift seeded with nonce + time
-        let mut rng_state = refresh_nonce
-            .wrapping_mul(0x9E37_79B9_7F4A_7C15)
-            ^ std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.subsec_nanos() as u64)
-                .unwrap_or(42);
-        if rng_state == 0 {
-            rng_state = 0xDEAD_BEEF_CAFE_BABEu64;
-        }
-        let mut next_u64 = || {
-            rng_state ^= rng_state << 13;
-            rng_state ^= rng_state >> 7;
-            rng_state ^= rng_state << 17;
-            rng_state
-        };
-
-        if refresh_nonce > 0 && fresh_recs.len() > 1 {
-            for i in (1..fresh_recs.len()).rev() {
-                let j = (next_u64() as usize) % (i + 1);
-                fresh_recs.swap(i, j);
-            }
-        }
-
-        let mut recs: Vec<Track> = fresh_recs.into_iter().take(18).collect();
-        if recs.len() < 18 {
-            for t in fallback_recs {
-                recs.push(t);
-                if recs.len() >= 18 {
-                    break;
-                }
-            }
+            recs.push(t);
         }
 
         (yt_history, recs)
@@ -551,37 +681,70 @@ impl YtmClient {
             }
         }
 
-        let (vision_res, ios_res, tv_res) = tokio::join!(
-            self.resolve_via_visionos_direct(video_id),
-            self.fetch_ios_loudness_and_hls(video_id),
-            self.resolve_via_tv_or_android_vr(video_id)
-        );
-
-        let resolved = match (vision_res, ios_res, tv_res) {
-            (Ok(mut stream), ios_out, _) => {
-                if let Ok((_, loudness)) = ios_out {
-                    stream.loudness_db = stream.loudness_db.or(loudness);
+        // Join an identical resolution that is already running (e.g. started by hover or
+        // upcoming-track prefetch) instead of doing all the network work twice.
+        let fut = {
+            let mut map = self.inflight.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(running) = map.get(video_id) {
+                running.clone()
+            } else {
+                let me = self.clone();
+                let vid = video_id.to_string();
+                let fut: InflightResolve = async move {
+                    let res = me.resolve_uncached(&vid).await.map_err(|e| e.to_string());
+                    me.inflight
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .remove(&vid);
+                    res
                 }
-                stream
+                .boxed()
+                .shared();
+                map.insert(video_id.to_string(), fut.clone());
+                fut
             }
-            (Err(_), Ok((Some(hls_stream), _)), _) => hls_stream,
-            (Err(_), ios_out, Ok(mut tv_stream)) => {
-                let loudness = ios_out.ok().and_then(|(_, l)| l);
-                tv_stream.loudness_db = tv_stream.loudness_db.or(loudness);
-                tv_stream
+        };
+        fut.await.map_err(|e| anyhow!(e))
+    }
+
+    /// Race the HLS resolvers (VISIONOS, iOS) and use the FIRST one that succeeds.
+    /// (Previously all resolvers were awaited together, so every song waited for the slowest
+    /// server, up to the 15 s request timeout.)
+    /// Direct progressive URLs (ANDROID_VR / iOS m4a) are NOT raced: YouTube answers them with
+    /// HTTP 403 after the first ~1 MB without a PO token, so the song would stop mid-way.
+    /// They are only a fallback, then yt-dlp as the very last resort.
+    async fn resolve_uncached(&self, video_id: &str) -> Result<ResolvedStream> {
+        let started = Instant::now();
+        let ios_hls = async {
+            match self.fetch_ios_loudness_and_hls(video_id).await? {
+                (Some(stream), _) if matches!(stream.kind, StreamKind::Hls { .. }) => Ok(stream),
+                _ => Err(anyhow!("iOS: no HLS stream")),
             }
-            (Err(vision_err), ios_out, Err(_)) => {
-                let loudness = ios_out.ok().and_then(|(_, l)| l);
-                warn!("Pure-Rust resolvers failed for {video_id}: {vision_err}; trying yt-dlp fallback...");
-                match self.resolve_via_ytdlp_fast(video_id).await {
-                    Ok(mut s) => {
-                        s.loudness_db = loudness;
-                        s
-                    }
-                    Err(_) => self.resolve_via_ytdlp_default(video_id, loudness).await?,
+        };
+        let racers: Vec<BoxFuture<'_, Result<ResolvedStream>>> = vec![
+            self.resolve_via_visionos_direct(video_id).boxed(),
+            ios_hls.boxed(),
+        ];
+
+        // A hung request (each one may take up to the 15 s client timeout, and VISIONOS chains
+        // several) must not hold the song hostage: give the HLS race 8 s, then fall back.
+        let race = tokio::time::timeout(Duration::from_secs(8), futures::future::select_ok(racers))
+            .await
+            .unwrap_or_else(|_| Err(anyhow!("HLS resolvers timed out after 8 s")));
+        let resolved = match race {
+            Ok((stream, _still_running)) => stream,
+            Err(hls_err) => {
+                warn!("HLS resolvers failed for {video_id}: {hls_err}; trying direct stream...");
+                match self.resolve_via_tv_or_android_vr(video_id).await {
+                    Ok(s) => s,
+                    Err(_) => match self.resolve_via_ytdlp_fast(video_id).await {
+                        Ok(s) => s,
+                        Err(_) => self.resolve_via_ytdlp_default(video_id, None).await?,
+                    },
                 }
             }
         };
+        debug!("Resolved {video_id} in {} ms", started.elapsed().as_millis());
 
         self.cache_stream(resolved.clone()).await;
         Ok(resolved)

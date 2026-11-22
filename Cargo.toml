@@ -1,6 +1,6 @@
 [package]
 name = "ytm-native"
-version = "7.0.0"
+version = "7.1.0"
 edition = "2021"
 authors = ["Rbg4445 <https://github.com/Rbg4445>"]
 license = "MIT"

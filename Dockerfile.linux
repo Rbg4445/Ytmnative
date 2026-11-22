@@ -25,7 +25,7 @@ RUN cargo build --release
 
 # Stage 2: Package .deb and .tar.gz into /out
 RUN mkdir -p /out \
-    && PKG_ROOT="/tmp/ytm-native_7.0.0_amd64" \
+    && PKG_ROOT="/tmp/ytm-native_7.1.0_amd64" \
     && mkdir -p "$PKG_ROOT/DEBIAN" \
                 "$PKG_ROOT/usr/bin" \
                 "$PKG_ROOT/usr/share/applications" \
@@ -34,6 +34,6 @@ RUN mkdir -p /out \
     && chmod 755 "$PKG_ROOT/usr/bin/ytm-native" \
     && cp icons/icon.png "$PKG_ROOT/usr/share/icons/hicolor/256x256/apps/ytm-native.png" \
     && printf "[Desktop Entry]\nName=YTM Native\nComment=Ultra-lightweight pure-Rust YouTube Music desktop client\nExec=/usr/bin/ytm-native\nIcon=ytm-native\nTerminal=false\nType=Application\nCategories=AudioVideo;Audio;Player;Music;\n" > "$PKG_ROOT/usr/share/applications/ytm-native.desktop" \
-    && printf "Package: ytm-native\nVersion: 7.0.0\nSection: sound\nPriority: optional\nArchitecture: amd64\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0, libasound2, libdbus-1-3, libayatana-appindicator3-1\nMaintainer: Rbg4445 <https://github.com/Rbg4445/Ytmnative>\nDescription: Ultra-lightweight pure-Rust YouTube Music desktop client\n" > "$PKG_ROOT/DEBIAN/control" \
-    && dpkg-deb --build --root-owner-group "$PKG_ROOT" /out/ytm-native_7.0.0_amd64.deb \
-    && tar -czf /out/YTM-Native-7.0.0-linux-x64.tar.gz -C target/release ytm-native
+    && printf "Package: ytm-native\nVersion: 7.1.0\nSection: sound\nPriority: optional\nArchitecture: amd64\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0, libasound2, libdbus-1-3, libayatana-appindicator3-1\nMaintainer: Rbg4445 <https://github.com/Rbg4445/Ytmnative>\nDescription: Ultra-lightweight pure-Rust YouTube Music desktop client\n" > "$PKG_ROOT/DEBIAN/control" \
+    && dpkg-deb --build --root-owner-group "$PKG_ROOT" /out/ytm-native_7.1.0_amd64.deb \
+    && tar -czf /out/YTM-Native-7.1.0-linux-x64.tar.gz -C target/release ytm-native
